@@ -1,3 +1,4 @@
+import { renamedPane, openPaneRename } from "./pane-rename.js";
 // Herdr XP's drawing kit: the Luna palettes, gradient bands, the XP window
 // frame and push button, menus and dialogs, fonts, icons, sounds, and the
 // layout list every switcher shares.
@@ -277,6 +278,8 @@ export function userName() {
 
 /** A pane's window title: "Claude Code - fix login"; a shell is XP's console. */
 export function paneTitle(p) {
+  const custom = renamedPane(p);
+  if (custom) return custom;
   if (!p) return "";
   if (p.mod) return p.title || p.mod;
   const prog = p.program;
@@ -334,6 +337,7 @@ export function zoom() {
 
 /** Does what a menu row or button names: { run: [cmd, args] } | { runs: [[cmd, args], ...] } | { open: role } | { dialog: kind } | { shared: [k, v] } | { boot } */
 export function perform(act) {
+  if (act?.renamePane) { openPaneRename(act.renamePane); return; }
   if (!act) return;
   if (act.run) run(act.run[0], act.run[1] ?? {});
   if (act.runs) for (const [c, a] of act.runs) run(c, a ?? {});
@@ -519,7 +523,7 @@ export function titleBar(P, o) {
       else o.onClick?.();
     });
   }
-  if (o.onRight) bar = bar.on_mouse_down("right", (e, cx) => { cx.stop_propagation(); o.onRight(e); });
+  if (o.onRight) bar = bar.on_mouse_down("right", (e, cx) => { cx.stop_propagation(); o.onRight(e, cx); });
   return bar;
 }
 

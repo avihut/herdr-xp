@@ -1,3 +1,4 @@
+import { paneRenameAvailable } from "./pane-rename.js";
 // A pane's title bar (the layout's pane header): Luna blue on the focused
 // pane, faded on the others. Minimize settles the tab to the taskbar,
 // Maximize zooms the pane, Close closes it; a double-click maximizes. The
@@ -12,12 +13,17 @@ import { dragHandle, canMove } from "./panedrag.js";
 export default class PaneWindow {
   init() {}
 
-  menu(e, p, movable) {
+  menu(e, p, movable, cx) {
+    const at = e?.position ? { x: e.position.x, y: e.position.y } : undefined;
+    cx.spawn(async (cx) => {
+    const renameAvailable = await paneRenameAvailable();
+    if (!panes().some(x => x.pane === p?.pane)) return;
     const id = p?.pane;
     const zoomed = Boolean(p?.zoomed);
     const move = (dir, label) => ({ label, act: { runs: [["pane.focus", { pane: id }], ["pane.swap", { direction: dir }]] } });
     openMenu(
       [
+        ...(renameAvailable ? [{ label: "Rename Pane…", shortcut: "Cmd+F2", act: { renamePane: id } }, { sep: true }] : []),
         { label: "Restore", disabled: !zoomed, act: { run: ["pane.zoom", { pane: id }] } },
         movable ? { label: "Move", sub: [move("left", "Left"), move("right", "Right"), move("up", "Up"), move("down", "Down")] } : { label: "Move", disabled: true },
         { label: "Size", disabled: true },
@@ -29,8 +35,10 @@ export default class PaneWindow {
         { sep: true },
         { label: "Close", bold: true, shortcut: "Alt+F4", act: { run: ["pane.close", { pane: id }] } },
       ],
-      e?.position ? { x: e.position.x, y: e.position.y } : undefined,
+      at,
     );
+    cx.notify();
+    });
   }
 
   render(_cx) {
@@ -46,7 +54,7 @@ export default class PaneWindow {
         .id(`wicon-${id}`)
         .flex_none()
         .child(p?.mod ? pic("folder", 16) : programIcon(p?.program, 16))
-        .on_click((e) => this.menu(e, p, movable)),
+        .on_click((e, cx) => this.menu(e, p, movable, cx)),
     );
     const badge = p?.status && p.status !== "idle" ? div().flex_none().w(8).h(8).mr(2).rounded(4).border_1().border_color("#ffffff").bg(statusColor(p.status)) : null;
     const bar = div().id(`pwin-${id}`).size_full();
@@ -67,7 +75,7 @@ export default class PaneWindow {
           ],
           onClick: () => run("pane.focus", { pane: id }),
           onDouble: () => run("pane.zoom", { pane: id }),
-          onRight: (e) => this.menu(e, p, movable),
+          onRight: (e, cx) => this.menu(e, p, movable, cx),
         }),
       );
   }

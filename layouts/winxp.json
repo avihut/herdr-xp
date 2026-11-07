@@ -82,18 +82,19 @@
     {
       "id": "taskbar",
       "type": "block",
-      "size": {
-        "px": 30
-      },
       "window_drag": true,
       "content": {
         "mod": "winxp",
         "props": {
           "role": "taskbar"
         }
+      },
+      "size": {
+        "px": 30
       }
     }
   ],
   "font": "PxPlus IBM VGA 8x16",
-  "font_size": 16
+  "font_size": 16,
+  "terminal_menu": "pane-rename-menu"
 }

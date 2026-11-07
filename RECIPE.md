@@ -112,3 +112,7 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
 - Start ▸ Layouts lists each layout once, marks Windows XP, and switches.
 - Minesweeper opens a cell on the first click without a mine. Solitaire moves a card to the foundation on a double-click, and a dragged card lands where it's dropped. Spider puts away a finished King-to-Ace run. FreeCell Game #1 deals J♦ 2♦ 9♥ J♣ 5♦ 7♥ 7♣ 5♥ across its first row.
 - Run with `htop` opens a tab running htop. Log Off ▸ Switch User shows the Welcome screen with every layout.
+
+## Optional pane names
+
+With [Pane Rename](https://github.com/avihut/herdr-pane-rename) installed, Cmd+F2 or the title-bar context menu’s **Rename Pane…** opens the XP-styled name dialog. Names appear consistently in window titles, taskbar groups, drag previews, and Task Manager. Empty names restore XP’s automatic titles. The title-bar menu reads the optional capability manifest once when opening and hides Rename when unavailable. Terminal right-clicks use the rename menu when installed; Herdr falls back to its default menu if it is absent.

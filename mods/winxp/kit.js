@@ -349,6 +349,7 @@ const WINDOWS = {
   freecell: [660, 500],
   mycomputer: [660, 460],
   bin: [600, 420],
+  games: [600, 400],
   taskman: [420, 440],
 };
 

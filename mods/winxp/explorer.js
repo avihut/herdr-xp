@@ -1,9 +1,21 @@
 // Explorer windows with XP's blue task pane:
 //   mycomputer  your spaces as drives (click one to show it), other machines
 //   bin         the Recycle Bin (empty: Herdr closes things for good)
+//   games       the Games folder: the games as tiles (one click starts one)
 
 import { props, closeOverlay, spaces, machines, run } from "herdr";
-import { div, h_flex, v_flex, pal, bands, grad, pic, frame, menuBar, uiFont, tildePath, own } from "./kit.js";
+import { div, h_flex, v_flex, pal, bands, grad, pic, frame, menuBar, uiFont, tildePath, own, openWindow } from "./kit.js";
+
+const TITLE = { mycomputer: "My Computer", bin: "Recycle Bin", games: "Games" };
+const ICON = { mycomputer: "computer", bin: "bin", games: "games" };
+
+/** What the Games folder holds: role (the window it opens), name, and a line about it. */
+export const GAMES = [
+  ["freecell", "FreeCell", "32,000 numbered deals"],
+  ["mines", "Minesweeper", "Find the mines"],
+  ["sol", "Solitaire", "Draw One or Draw Three"],
+  ["spider", "Spider Solitaire", "One, two or four suits"],
+];
 
 export default class Explorer {
   init(p) {
@@ -70,7 +82,7 @@ export default class Explorer {
           .border_t_1()
           .border_color(P.popupBorder)
           .child(div().text_size(11).text_color(P.faceDim).child("Address"))
-          .child(h_flex().flex_1().h(19).bg(P.field).border_1().border_color(P.fieldBorder).px(3).gap(4).items_center().child(pic(this.role === "bin" ? "bin" : "computer", 14)).child(div().text_size(11).child(where)))
+          .child(h_flex().flex_1().h(19).bg(P.field).border_1().border_color(P.fieldBorder).px(3).gap(4).items_center().child(pic(ICON[this.role] ?? "computer", 14)).child(div().text_size(11).child(where)))
           .child(h_flex().gap(3).items_center().child(pic("go", 18)).child(div().text_size(11).child("Go"))),
       );
   }
@@ -101,6 +113,27 @@ export default class Explorer {
     );
   }
 
+  game(P, [role, name, about]) {
+    const on = this.sel === role;
+    return own(
+      h_flex()
+        .id(`game-${role}`)
+        .w(220)
+        .gap(8)
+        .p(4)
+        .items_center()
+        .rounded(2)
+        .when(on, (el) => el.bg(P.menuHover).text_color("#ffffff"))
+        .child(pic(role, 32))
+        .child(v_flex().min_w(0).child(div().truncate().text_size(11).child(name)).child(div().truncate().text_size(10).opacity(0.7).child(about)))
+        .on_mouse_down("left", (_e, cx) => {
+          this.sel = role;
+          cx.notify();
+        })
+        .on_click(() => openWindow(role)),
+    );
+  }
+
   group(P, title, children) {
     return v_flex()
       .gap(6)
@@ -111,7 +144,8 @@ export default class Explorer {
   render(_cx) {
     const P = pal();
     const bin = this.role === "bin";
-    const title = bin ? "Recycle Bin" : "My Computer";
+    const games = this.role === "games";
+    const title = TITLE[this.role] ?? "My Computer";
     const sp = spaces();
     const local = sp.filter((s) => !s.machine);
     const remote = sp.filter((s) => s.machine);
@@ -138,13 +172,17 @@ export default class Explorer {
           .child(
             bin
               ? this.box(P, "Recycle Bin Tasks", [["bin", "Empty the Recycle Bin", null], ["restore", "Restore all items", null]])
-              : this.box(P, "System Tasks", [["info", "View system information", () => run("app.settings", {})], ["control", "Change a setting", () => run("app.settings", {})], ["folder-new", "Add a new space", () => run("space.new", {})]]),
+              : games
+                ? this.box(P, "Game Tasks", [["games", "Play a random game", () => openWindow(GAMES[Math.floor(Math.random() * GAMES.length)][0])]])
+                : this.box(P, "System Tasks", [["info", "View system information", () => run("app.settings", {})], ["control", "Change a setting", () => run("app.settings", {})], ["folder-new", "Add a new space", () => run("space.new", {})]]),
           )
-          .child(this.box(P, "Other Places", [["computer", bin ? "My Computer" : "My Documents", null], ["network", "My Network Places", null], ["control", "Control Panel", () => run("app.settings", {})]])),
+          .child(this.box(P, "Other Places", [bin || games ? ["computer", "My Computer", () => openWindow("mycomputer")] : ["documents", "My Documents", null], ["network", "My Network Places", null], ["control", "Control Panel", () => run("app.settings", {})]])),
       );
     const content = bin
       ? v_flex().flex_1().min_w(0).h_full().p(16).bg(P.list).child(div().text_size(11).text_color(P.faceDim).child("This folder is empty."))
-      : v_flex()
+      : games
+        ? v_flex().flex_1().min_w(0).h_full().p(14).gap(16).bg(P.list).overflow_hidden().child(this.group(P, "Games", GAMES.map((g) => this.game(P, g))))
+        : v_flex()
           .flex_1()
           .min_w(0)
           .h_full()
@@ -155,11 +193,11 @@ export default class Explorer {
           .child(this.group(P, "Spaces Stored on This Computer", local.map((s) => this.drive(P, s))))
           .when(remote.length > 0, (el) => el.child(this.group(P, "Network Spaces", remote.map((s) => this.drive(P, s)))))
           .when(others.length > 0, (el) => el.child(this.group(P, "Other Machines", others.map((m) => h_flex().w(220).gap(8).p(4).items_center().child(pic("network", 32)).child(div().text_size(11).child(`${m.name} (${m.layout})`))))));
-    const count = bin ? 0 : sp.length;
+    const count = bin ? 0 : games ? GAMES.length : sp.length;
     return frame(P, {
       id: `xp-${this.role}`,
       title,
-      icon: pic(bin ? "bin" : "computer", 16),
+      icon: pic(ICON[this.role] ?? "computer", 16),
       caps: [["ctl-min", () => this.dismiss()], ["ctl-max", () => {}], ["ctl-close", () => this.dismiss()]],
       body: v_flex()
         .size_full()

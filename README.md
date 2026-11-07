@@ -10,7 +10,7 @@ A Windows XP-style layout for the [Herdr](https://herdr.dev) desktop app: Luna-b
 - **Terminals** look like XP's Command Prompt: black, light gray text, the 16 console colors and a bitmap font. They stay that way in light and dark.
 - **Taskbar.** The start button, Quick Launch (Show Desktop, Command Prompt, your agents), and a button for each tab of the shown space. When more than five tabs are open, a program's tabs share one button with a count. The notification area shows agents waiting for you, the connection (two monitors for Ethernet, radio waves for Wi-Fi, a red X when you're offline), the battery's charge on a laptop (with a plug while charging), the chevron that shows hidden icons, and the clock. Click the connection or the battery for its status. Right-click the taskbar for its menu.
 - **Start menu.** Pinned and often-used programs on the left, with All Programs ▸ Accessories ▸ Games and System Tools. On the right: My Spaces ▸, My Recent Tabs ▸, My Computer, Control Panel, Layouts ▸ (switch to another Herdr layout), Display Properties, Help and Support, Search and Run. At the bottom: Log Off and Turn Off Computer.
-- **Desktop.** My Computer, Recycle Bin, each space as a folder (click to show it), Command Prompt and the games. Right-click an icon or the desktop for its menu.
+- **Desktop.** My Computer, Recycle Bin, each space as a folder (click to show it), Command Prompt and the Games folder. Games has its own icon, playing cards and a joystick, so it never looks like a space; click it for a window of the four games. Right-click an icon or the desktop for its menu.
 - **Windows of their own.**
   - My Computer, which lists your spaces as drives next to XP's blue task pane.
   - The Recycle Bin.

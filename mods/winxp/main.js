@@ -9,7 +9,7 @@
 //   dialog      Run, Log Off, Turn Off, Display Properties, About, ...
 //   boot        the boot screen       welcome  the Welcome screen
 //   balloon     a notification balloon above the tray
-//   mycomputer, bin   Explorer windows with the task pane
+//   mycomputer, bin, games   Explorer windows with the task pane (games: the Games folder)
 //   taskman     Task Manager
 //   mines, sol, spider, freecell   Minesweeper and the card games (cardtable.js)
 
@@ -32,7 +32,7 @@ import PaneDrag from "./panedrag.js";
 
 const ROLES = {
   taskbar: Taskbar, desktop: Desktop, window: PaneWindow, start: StartMenu, menu: Menu, dialog: Dialog,
-  boot: Boot, welcome: Welcome, balloon: Balloon, mycomputer: Explorer, bin: Explorer, taskman: TaskMan,
+  boot: Boot, welcome: Welcome, balloon: Balloon, mycomputer: Explorer, bin: Explorer, games: Explorer, taskman: TaskMan,
   mines: Mines, sol: Sol, spider: Spider, freecell: FreeCell, panedrag: PaneDrag,
 };
 

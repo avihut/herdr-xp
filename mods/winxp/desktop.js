@@ -1,12 +1,15 @@
 // The desktop: icons down the left edge of the wallpaper. My Computer, the
 // Recycle Bin, each space as a folder (the shown one selected), Command
-// Prompt and the games. One click opens; right-click for an icon's menu or
-// the desktop's. It also keeps the wallpaper in step with the theme: when the
-// shown theme turns dark or light it points the layout's background at the
-// night or the day picture (layout.set; Herdr caches a background by path).
+// Prompt and the Games folder (its own icon, cards and a joystick, so it
+// doesn't pass for a space; it opens an Explorer window of the games). One
+// click opens; right-click for an icon's menu or the desktop's. It also keeps
+// the wallpaper in step with the theme: when the shown theme turns dark or
+// light it points the layout's background at the night or the day picture
+// (layout.set; Herdr caches a background by path).
 
 import { spaces, run, layout } from "herdr";
 import { div, v_flex, pal, pic, isDark, uiFont, openMenu, openWindow, openDialog } from "./kit.js";
+import { GAMES } from "./explorer.js";
 
 const WALL = (k) => `mods/winxp/img/wallpaper-${k}.svg`;
 
@@ -121,9 +124,17 @@ export default class Desktop {
         ),
       )
       .child(this.icon(P, "cmd", "cmd", "Command Prompt", { open: () => run("tab.new", {}) }))
-      .child(this.icon(P, "mines", "mines", "Minesweeper", { open: () => openWindow("mines") }))
-      .child(this.icon(P, "sol", "sol", "Solitaire", { open: () => openWindow("sol") }))
-      .child(this.icon(P, "spider", "spider", "Spider Solitaire", { open: () => openWindow("spider") }))
-      .child(this.icon(P, "freecell", "freecell", "FreeCell", { open: () => openWindow("freecell") }));
+      .child(
+        this.icon(P, "games", "games", "Games", {
+          open: () => openWindow("games"),
+          menu: () => [
+            { label: "Open", bold: true, act: { open: "games" } },
+            { sep: true },
+            ...GAMES.map(([role, name]) => ({ label: name, icon: role, act: { open: role } })),
+            { sep: true },
+            { label: "Properties", disabled: true },
+          ],
+        }),
+      );
   }
 }

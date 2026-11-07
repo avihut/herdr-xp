@@ -8,7 +8,7 @@ The whole Herdr window as a Windows XP desktop. A Luna-blue taskbar runs along t
 
 Fonts are Tahoma 11 px for UI text and Trebuchet MS bold 13 px for titles, falling back to Verdana or DejaVu Sans. Terminals use PxPlus IBM VGA 8x16 at 16 px, which ships with Herdr's Windows 98 layout.
 
-1. **Desktop column, 96 px, left.** Icons are 34 px, each with a white 11 px label carrying a 1 px dark shadow; the selected icon's label is on `#316ac5`. From the top: My Computer, Recycle Bin, one folder per space (the shown space selected), Command Prompt, Minesweeper, Solitaire, Spider Solitaire. There is 40 px of room at the top for the macOS traffic lights at (12, 12).
+1. **Desktop column, 96 px, left.** Icons are 34 px, each with a white 11 px label carrying a 1 px dark shadow; the selected icon's label is on `#316ac5`. From the top: My Computer, Recycle Bin, one folder per space (the shown space selected), Command Prompt, Games. Games is the space folder with an ace of spades and a heart sticking out and a red-ball joystick in front (`img/games.svg`), so it never passes for a space. There is 40 px of room at the top for the macOS traffic lights at (12, 12).
 2. **Windows, the rest above the taskbar.** The shown tab's panes sit 10 px apart, with 14 px of padding. Each has:
    - a 3 px frame (`border` theme color, `accent` when focused), radius 7;
    - a 30 px title bar: a 16 px icon, a bold white title with a `#0f1089` shadow, and three 21 px caption buttons (blue, blue, red-orange, white edge, radius 3);
@@ -56,6 +56,7 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
   - A choice closes the menu and acts.
 - **Desktop.**
   - One click opens an icon. Right-click an icon for its menu: a space's has Open, New Tab Here, Rename, and Delete, which asks first.
+  - Games opens the Games folder, an Explorer window (`games` role) with the four games as tiles: FreeCell, Minesweeper, Solitaire, Spider Solitaire, each with a line about it. One click starts one. Its task pane has Play a random game. Its menu has Open, then each game.
   - Right-click the desktop for Arrange Icons By, Refresh, New ▸ Space or Tab, and Properties.
 - **Wallpaper.** When the theme turns dark or light, the desktop role runs `layout.set` with the other wallpaper. Herdr caches a background by path, so rewriting the file isn't enough.
 - **Welcome screen** (Log Off ▸ Log Off or Switch User). Every layout is a user, the shown one marked. Clicking another switches to it; clicking the shown one logs back on with the startup chime.
@@ -80,7 +81,7 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
   - an overlay window for `balloon`;
   - a full-window, frameless popup for `panedrag` (`{ pane, title, bars, press }`), the layer that follows a dragged title bar;
   - helpers without a role: `battery.js` (`pmset -g batt`) and `network.js` (`scutil --nwi`, `networksetup -listallhardwareports`, `ifconfig`), which the taskbar polls;
-  - windows with `key` `winxp-<role>`: `mycomputer`, `bin`, `taskman`, `mines`, `sol`, `spider`, `freecell`.
+  - windows with `key` `winxp-<role>`: `mycomputer`, `bin`, `games` (Explorer windows), `taskman`, `mines`, `sol`, `spider`, `freecell`.
 - **The card games** share `cardtable.js`, a `CardTable` class that owns the table: drag and drop, click to move, double-click and right-click auto-moves, Undo, F2, the menus, the status bar, table messages, a hint flash and the bouncing win. Each game extends it with its rules (`setup`, `layout`, `canPick`, `canDrop`, `moved`, `clickPile`, `autoMove`, `isWon`, `status`). `cards.js` draws the cards.
 - **Commands.**
   - `tab.new`, `tab.select`, `tab.settle`, `space.select`, `space.new`, `space.rename`, `space.close`;

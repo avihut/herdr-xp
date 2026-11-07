@@ -20,7 +20,7 @@ function words(cmd) {
   return out;
 }
 
-const TITLES = { run: "Run", logoff: "Log Off Herdr", turnoff: "Turn off computer", display: "Display Properties", about: "About Herdr XP", cleanup: "Desktop Cleanup Wizard" };
+const TITLES = { message: "Herdr", run: "Run", logoff: "Log Off Herdr", turnoff: "Turn off computer", display: "Display Properties", about: "About Herdr XP", cleanup: "Desktop Cleanup Wizard" };
 
 export default class Dialog {
   init(p, cx) {
@@ -296,6 +296,17 @@ export default class Dialog {
       );
   }
 
+  messageBody(P) {
+    const p = props() ?? {};
+    return v_flex()
+      .size_full()
+      .p(12)
+      .gap(10)
+      .child(h_flex().gap(12).items_start().child(pic(p.icon ?? "info", 32)).child(v_flex().flex_1().gap(2).text_size(11).children(String(p.text ?? "").split("\n").map((l) => div().child(l)))))
+      .child(div().flex_1())
+      .child(h_flex().justify_center().child(button(P, "msg-ok", "OK", () => this.dismiss(), { isDefault: true })));
+  }
+
   aboutBody(P) {
     const u = (() => {
       try {
@@ -381,10 +392,10 @@ export default class Dialog {
     if (k === "logoff") return this.logoffBody(P);
     if (k === "turnoff") return this.turnoffBody(P);
     const p = props() ?? {};
-    const body = k === "run" ? this.runBody(P) : k === "confirm" ? this.confirmBody(P) : k === "display" ? this.displayBody(P) : k === "about" ? this.aboutBody(P) : k === "cleanup" ? this.cleanupBody(P) : div().child(`winxp: no dialog "${k}"`);
+    const body = k === "message" ? this.messageBody(P) : k === "run" ? this.runBody(P) : k === "confirm" ? this.confirmBody(P) : k === "display" ? this.displayBody(P) : k === "about" ? this.aboutBody(P) : k === "cleanup" ? this.cleanupBody(P) : div().child(`winxp: no dialog "${k}"`);
     return frame(P, {
       id: `xp-dlg-${k}`,
-      title: k === "confirm" ? (p.title ?? "Herdr") : TITLES[k] ?? "Herdr",
+      title: k === "confirm" || k === "message" ? (p.title ?? "Herdr") : TITLES[k] ?? "Herdr",
       icon: pic(k === "run" ? "run" : k === "display" ? "display-props" : k === "cleanup" ? "cleanup" : k === "about" ? "info" : "flag", 16),
       caps: [["ctl-help", () => run("app.help", {})], ["ctl-close", () => this.dismiss()]],
       body,

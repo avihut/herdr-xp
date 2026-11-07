@@ -3,9 +3,14 @@
 // flags (then ?), double-click a number to open around it when its flags
 // add up. The smiley starts over; the counters are mines left and seconds.
 
-import { props, shared, settings, openOverlay } from "herdr";
-import { div, h_flex, v_flex, pal, pic, frame, menuBar, uiFont, own } from "./kit.js";
-import { closeOverlay } from "herdr";
+import { props, shared, setShared, settings, openOverlay, closeOverlay } from "herdr";
+import { div, h_flex, v_flex, pal, pic, frame, menuBar, uiFont, own, openDialog } from "./kit.js";
+
+// Seven-segment digits for the counters: which segments each shows (a top, b top right,
+// c bottom right, d bottom, e bottom left, f top left, g middle).
+const SEGS = { 0: "abcdef", 1: "bc", 2: "abged", 3: "abgcd", 4: "fgbc", 5: "afgcd", 6: "afgedc", 7: "abc", 8: "abcdefg", 9: "abcdfg", "-": "g", " ": "" };
+const SEG_AT = { a: [2, 0, 9, 2], b: [11, 2, 2, 8], c: [11, 12, 2, 8], d: [2, 20, 9, 2], e: [0, 12, 2, 8], f: [0, 2, 2, 8], g: [2, 10, 9, 2] };
+const LEVEL_NAMES = { beginner: "Beginner", intermediate: "Intermediate", expert: "Expert" };
 
 const LEVELS = { beginner: [9, 9, 10], intermediate: [16, 16, 40], expert: [30, 16, 99] };
 const NUM = ["", "#0000ff", "#008000", "#ff0000", "#000080", "#800000", "#008080", "#000000", "#808080"];
@@ -18,6 +23,7 @@ export function minesSize(level) {
 
 export default class Mines {
   init(p, cx) {
+    this.focus = cx.focus_handle();
     this.level = p?.level ?? props()?.level ?? "beginner";
     this.seen = Number(shared("winxp.mines")?.at ?? 0);
     this.reset();
@@ -31,7 +37,7 @@ export default class Mines {
 
   reset() {
     const [cols, rows, mines] = LEVELS[this.level] ?? LEVELS.beginner;
-    Object.assign(this, { cols, rows, mines, n: cols * rows, state: "ready", time: 0, boom: -1, pressing: false });
+    Object.assign(this, { cols, rows, mines, n: cols * rows, state: "ready", time: 0, boom: -1, pressing: false, down: null });
     this.mine = new Array(this.n).fill(false);
     this.open = new Array(this.n).fill(false);
     this.flag = new Array(this.n).fill(0);
@@ -83,6 +89,12 @@ export default class Mines {
     if (this.open.filter((o, j) => o && !this.mine[j]).length === this.n - this.mines) {
       this.state = "won";
       for (let j = 0; j < this.n; j++) if (this.mine[j]) this.flag[j] = 1;
+      const best = { ...(shared("winxp.mines.best") ?? {}) };
+      if (!(best[this.level] <= this.time)) {
+        best[this.level] = this.time;
+        setShared("winxp.mines.best", best);
+        openDialog("message", { title: "Minesweeper", icon: "mines", text: `You have the fastest time for ${LEVEL_NAMES[this.level].toLowerCase()} level: ${this.time} seconds.` });
+      }
     }
   }
 
@@ -129,9 +141,16 @@ export default class Mines {
     return div().flex_none().border_t(w).border_l(w).border_color("#808080").child(div().border_r(w).border_b(w).border_color("#ffffff").child(content));
   }
 
+  digit(ch) {
+    const on = SEGS[ch] ?? "";
+    let d = div().relative().w(13).h(23).flex_none();
+    for (const [k, [x, y, w, h]] of Object.entries(SEG_AT)) d = d.child(div().absolute().left(x).top(y).w(w).h(h).rounded(1).bg(on.includes(k) ? "#ff0000" : "#3c0000"));
+    return d;
+  }
+
   led(n) {
     const s = n < 0 ? `-${String(Math.min(99, -n)).padStart(2, "0")}` : String(Math.min(999, n)).padStart(3, "0");
-    return this.sunken(div().w(41).h(25).bg("#000000").flex().items_center().justify_center().font_family("Courier New").font_weight(700).text_size(22).text_color("#ff0000").child(s), 1);
+    return this.sunken(h_flex().w(45).h(25).px(2).gap(2).items_center().bg("#000000").children([...s].map((ch) => this.digit(ch))), 1);
   }
 
   cell(i) {
@@ -139,31 +158,32 @@ export default class Mines {
     if (!shownOpen) {
       const f = this.flag[i];
       const wrongFlag = this.state === "lost" && f === 1 && !this.mine[i];
-      let inner = f === 1 ? pic(wrongFlag ? "mine-wrong" : "mine-flag", 12) : f === 2 ? div().text_size(11).font_weight(700).child("?") : div();
-      return own(
-        div()
-          .id(`mc-${i}`)
-          .child(this.raised(inner, CELL))
-          .on_mouse_down("left", (_e, cx) => {
-            cx.stop_propagation();
-            if (this.state === "ready" || this.state === "play") this.pressing = true;
+      const inner = f === 1 ? pic(wrongFlag ? "mine-wrong" : "mine-flag", 12) : f === 2 ? div().text_size(11).font_weight(700).child("?") : div();
+      const sunk = this.down === i && f !== 1;
+      const face = sunk ? div().w(CELL).h(CELL).flex_none().bg("#c0c0c0").border_r_1().border_b_1().border_color("#808080").flex().items_center().justify_center().child(inner) : this.raised(inner, CELL);
+      return div()
+        .id(`mc-${i}`)
+        .child(face)
+        .on_mouse_down("left", (e, cx) => {
+          cx.stop_propagation();
+          this.focus.focus();
+          if (this.state !== "ready" && this.state !== "play") return;
+          if (e?.click_count >= 2) return;
+          this.pressing = true;
+          this.down = i;
+          cx.notify();
+        })
+        .on_mouse_move((_e, cx) => {
+          if (this.pressing && this.down !== i) {
+            this.down = i;
             cx.notify();
-          })
-          .on_mouse_up("left", (_e, cx) => {
-            this.pressing = false;
-            cx.notify();
-          })
-          .on_click((_e, cx) => {
-            this.pressing = false;
-            this.reveal(i);
-            cx.notify();
-          })
-          .on_mouse_down("right", (_e, cx) => {
-            cx.stop_propagation();
-            this.toggleFlag(i);
-            cx.notify();
-          }),
-      );
+          }
+        })
+        .on_mouse_down("right", (_e, cx) => {
+          cx.stop_propagation();
+          this.toggleFlag(i);
+          cx.notify();
+        });
     }
     const bomb = this.mine[i];
     return own(
@@ -180,11 +200,28 @@ export default class Mines {
         .items_center()
         .justify_center()
         .child(bomb ? pic("mine-bomb", 13) : div().font_family(uiFont()).font_weight(700).text_size(12).text_color(NUM[this.count[i]] || "#000000").child(this.count[i] ? String(this.count[i]) : ""))
-        .on_click((e, cx) => {
+        .on_mouse_down("left", (e, cx) => {
+          cx.stop_propagation();
+          this.focus.focus();
           if (e?.click_count >= 2) this.chord(i);
+          cx.notify();
+        })
+        .on_mouse_down("middle", (_e, cx) => {
+          cx.stop_propagation();
+          this.chord(i);
           cx.notify();
         }),
     );
+  }
+
+  /** Letting go opens the cell under the pointer (it may not be the one first pressed). */
+  letGo(cx) {
+    if (!this.pressing) return;
+    const i = this.down;
+    this.pressing = false;
+    this.down = null;
+    if (i !== null && i !== undefined) this.reveal(i);
+    cx.notify();
   }
 
   render(_cx) {
@@ -196,7 +233,16 @@ export default class Mines {
     for (let y = 0; y < this.rows; y++) rows.push(h_flex().children(Array.from({ length: this.cols }, (_, x) => this.cell(y * this.cols + x))));
     const lv = (key, label) => ({ label, radio: this.level === key, act: { shared: ["winxp.mines", { cmd: "level", level: key, at: Date.now() }] } });
     const body = v_flex()
+      .id("mn-body")
       .size_full()
+      .track_focus(this.focus)
+      .on_key_down((e, cx) => {
+        if (e?.keystroke === "f2") {
+          this.reset();
+          cx.notify();
+        }
+      })
+      .on_mouse_up("left", (_e, cx) => this.letGo(cx))
       .child(
         menuBar(P, "mn", [
           ["Game", () => [
@@ -210,7 +256,7 @@ export default class Mines {
             { label: "Marks (?)", checked: true, disabled: true },
             { label: "Color", checked: true, disabled: true },
             { sep: true },
-            { label: "Best Times...", disabled: true },
+            { label: "Best Times...", act: { dialog: "message", props: { title: "Fastest Mine Sweepers", icon: "mines", text: Object.entries(LEVEL_NAMES).map(([k, n]) => `${n}: ${(shared("winxp.mines.best") ?? {})[k] ?? 999} seconds`).join("\n") } } },
           ]],
           ["Help", [{ label: "Contents", act: { run: ["app.help", {}] } }, { sep: true }, { label: "About Minesweeper...", act: { dialog: "about" } }]],
         ]),
@@ -248,7 +294,7 @@ export default class Mines {
               2,
             ),
           )
-          .child(this.sunken(v_flex().children(rows), 3)),
+          .child(this.sunken(v_flex().id("mn-grid").children(rows).on_mouse_up("left", (_e, cx) => this.letGo(cx)), 3)),
       );
     return frame(P, {
       id: "xp-mines",

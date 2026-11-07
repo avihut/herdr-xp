@@ -64,18 +64,20 @@ def install():
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO / rel, dst)
         print(f"  {rel}")
+    # The mod goes in whole: staged beside mods/, then swapped in with renames, so Herdr reloads
+    # it once instead of once per file (and never sees a folder without mod.json).
     dst = HOME / MOD
-    if dst.exists():
-        shutil.copytree(REPO / MOD, dst, dirs_exist_ok=True)
-    else:
-        # Staged outside mods/ and moved in whole: Herdr never sees a mod folder without mod.json.
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        stage = HOME / f".winxp-staging-{os.getpid()}"
-        try:
-            shutil.copytree(REPO / MOD, stage)
-            os.replace(stage, dst)
-        finally:
-            shutil.rmtree(stage, ignore_errors=True)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    stage = HOME / f".winxp-staging-{os.getpid()}"
+    old = HOME / f".winxp-old-{os.getpid()}"
+    try:
+        shutil.copytree(REPO / MOD, stage)
+        if dst.exists():
+            os.replace(dst, old)
+        os.replace(stage, dst)
+    finally:
+        shutil.rmtree(stage, ignore_errors=True)
+        shutil.rmtree(old, ignore_errors=True)
     print(f"  {MOD}/")
     if merge_keys():
         print("  keys.json: Ctrl+Esc opens the Start menu")

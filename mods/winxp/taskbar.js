@@ -27,6 +27,7 @@ const COMMANDS = {
   mines: () => openWindow("mines"),
   sol: () => openWindow("sol"),
   spider: () => openWindow("spider"),
+  freecell: () => openWindow("freecell"),
   mycomputer: () => openWindow("mycomputer"),
   taskman: () => openWindow("taskman"),
   tour: () => setShared("winxp.balloon", { kind: "tour", at: Date.now() }),
@@ -352,7 +353,7 @@ export default class Taskbar {
         { label: "Lock the Taskbar", checked: true, disabled: true },
         { label: "Properties", act: { dialog: "display" } },
       ],
-      e?.position ? { above: { x: e.position.x, y: e.position.y } } : undefined,
+      e?.position ? { above: { x: e.position.x, y: e.position.y, width: 0, height: 0 } } : undefined,
     );
   }
 

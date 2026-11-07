@@ -75,7 +75,8 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
   - popups: `start` and `menu` (a cascading menu: `{ items, parents }`);
   - dialogs: `dialog` (`kind` run, logoff, turnoff, confirm, display, about, cleanup), `boot`, `welcome`;
   - an overlay window for `balloon`;
-  - windows with `key` `winxp-<role>`: `mycomputer`, `bin`, `taskman`, `mines`, `sol`, `spider`.
+  - windows with `key` `winxp-<role>`: `mycomputer`, `bin`, `taskman`, `mines`, `sol`, `spider`, `freecell`.
+- **The card games** share `cardtable.js`, a `CardTable` class that owns the table: drag and drop, click to move, double-click and right-click auto-moves, Undo, F2, the menus, the status bar, table messages, a hint flash and the bouncing win. Each game extends it with its rules (`setup`, `layout`, `canPick`, `canDrop`, `moved`, `clickPile`, `autoMove`, `isWon`, `status`). `cards.js` draws the cards.
 - **Commands.**
   - `tab.new`, `tab.select`, `tab.settle`, `space.select`, `space.new`, `space.rename`, `space.close`;
   - `pane.focus`, `pane.zoom`, `pane.close`, `pane.split`, `terminal.kill`, `agent.focus`;
@@ -89,6 +90,7 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
 - A popup doesn't give its content a definite height. Give the Start menu root an explicit `.w()` / `.h()`, or it shrinks to its rows and leaves a gap above the taskbar.
 - Gradients have two stops. Luna's bars are stacks of bands, made by a `stops()` helper from CSS-style stop lists.
 - `InputState` and `Input` come from `gpui-base`, not `gpui-kit`. There is no `line_clamp`; use `max_h` with `overflow_hidden`.
+- Install a mod by swapping its folder in whole (stage it, then rename). Copying file by file reloads it once per file, and after enough reloads Herdr's runtime for the mod runs "out of memory" until Herdr.app restarts.
 - Herdr's CLI can't send a mod command. To look at a role, open it as a mod pane: `herdr-app do tab.new --mod winxp --props '{"role":"mines"}'`.
 - Overlay windows can't minimize; their Minimize closes them.
 - The Recycle Bin is always empty, since Herdr closes things for good.
@@ -98,5 +100,5 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
 - `herdr-app check mods/winxp` passes, and `herdr-app status` shows no errors with the layout shown, in light and in dark.
 - The wallpaper follows the theme within a second of switching the system appearance.
 - Start ▸ Layouts lists each layout once, marks Windows XP, and switches.
-- Minesweeper opens a cell on the first click without a mine. Solitaire moves a card to the foundation on a double-click. Spider puts away a finished King-to-Ace run.
+- Minesweeper opens a cell on the first click without a mine. Solitaire moves a card to the foundation on a double-click, and a dragged card lands where it's dropped. Spider puts away a finished King-to-Ace run. FreeCell Game #1 deals J♦ 2♦ 9♥ J♣ 5♦ 7♥ 7♣ 5♥ across its first row.
 - Run with `htop` opens a tab running htop. Log Off ▸ Switch User shows the Welcome screen with every layout.

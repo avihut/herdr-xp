@@ -344,7 +344,8 @@ export function perform(act) {
 const WINDOWS = {
   mines: [190, 294],
   sol: [640, 500],
-  spider: [820, 540],
+  spider: [820, 560],
+  freecell: [660, 500],
   mycomputer: [660, 460],
   bin: [600, 420],
   taskman: [420, 440],
@@ -357,6 +358,7 @@ export function openWindow(role, props = {}) {
 }
 
 const DIALOGS = {
+  message: [330, 170],
   run: [360, 188],
   logoff: [300, 182],
   turnoff: [312, 200],
@@ -389,21 +391,41 @@ export function menuSize(items) {
   return { w: Math.ceil(w), h };
 }
 
-/** Opens a popup menu: items [{ label, icon, act, sub, bold, disabled, radio, checked, sep, shortcut }]. at: window px. */
+/** The window's size in logical px (for keeping popups on screen). */
+export function windowSize() {
+  try {
+    const b = window.bounds();
+    if (b?.width && b?.height) return { width: b.width, height: b.height };
+  } catch {}
+  return { width: 1600, height: 1000 };
+}
+
+/** Opens a popup menu: items [{ label, icon, act, sub, bold, disabled, radio, checked, sep, shortcut }].
+ *  at: window px ({ x, y }, or { above: bounds }, or { beside: bounds } for a submenu: right of it, its
+ *  top level with the row, moved up or to the left to stay on screen). */
 export function openMenu(items, at, o = {}) {
   const { w, h } = menuSize(items);
+  const z = zoom();
+  const W = (o.width ?? w) * z;
+  const H = h * z;
+  const win = windowSize();
   let where = at;
-  if (at?.above) where = { x: at.above.x, y: Math.max(0, at.above.y - h * zoom()) };
-  const id = openOverlay({
+  if (at?.above) where = { x: at.above.x, y: at.above.y - H };
+  if (at?.beside) {
+    const b = at.beside;
+    where = { x: b.x + b.width - 3, y: o.bottom ? b.y + b.height - H + 3 : b.y - 3 };
+    if (where.x + W > win.width) where.x = b.x - W + 3;
+  }
+  if (where) where = { x: Math.max(0, Math.min(where.x, win.width - W)), y: Math.max(0, Math.min(where.y, win.height - H)) };
+  return openOverlay({
     mod: "winxp",
     kind: "popup",
     frame: "none",
-    width: (o.width ?? w) * zoom(),
-    height: h * zoom(),
+    width: W,
+    height: H,
     ...(where ? { at: where } : {}),
     props: { role: "menu", items, parents: o.parents ?? [] },
   });
-  return id;
 }
 
 export function closeOverlays(ids) {

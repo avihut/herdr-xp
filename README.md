@@ -1,6 +1,6 @@
 # Herdr XP
 
-A Windows XP-style layout for the [Herdr](https://herdr.dev) desktop app: Luna-blue windows around every terminal, console-black terminals, a green start button, the two-column Start menu, Minesweeper, Solitaire and Spider Solitaire, and the Welcome screen.
+A Windows XP-style layout for the [Herdr](https://herdr.dev) desktop app: Luna-blue windows around every terminal, console-black terminals, a green start button, the two-column Start menu, Minesweeper, Solitaire, Spider Solitaire and FreeCell, and the Welcome screen.
 
 ![Herdr XP](preview.png)
 
@@ -15,9 +15,11 @@ A Windows XP-style layout for the [Herdr](https://herdr.dev) desktop app: Luna-b
   - My Computer, which lists your spaces as drives next to XP's blue task pane.
   - The Recycle Bin.
   - Task Manager. End Task asks first, and an agent that needs you shows as "Not Responding".
-  - Minesweeper (Beginner, Intermediate, Expert).
-  - Solitaire (Klondike, draw one).
-  - Spider Solitaire (one, two or four suits).
+  - Minesweeper (Beginner, Intermediate, Expert). It has seven-segment counters, cells that sink while held, chording on double-click or middle-click, Best Times, and F2.
+  - Solitaire (Klondike, Draw One or Draw Three), with standard scoring and the bouncing cards when you win.
+  - Spider Solitaire (one, two or four suits), with H for a hint.
+  - FreeCell, which deals Microsoft's numbered games (Game #1 to #32000). It moves runs that fit your free space, sends safe cards home by itself, and has the king who looks toward your pointer.
+- **The card games feel the same.** Drag cards to move them, or click a card and then click where it goes. Double-click or right-click sends a card home. Undo with Ctrl+Z or ⌘Z, and start a new game with F2.
 - **Dialogs.**
   - Run starts a command in a new tab.
   - Log Off and Switch User go to the Welcome screen, where each of your layouts is a user: click one to switch to it.

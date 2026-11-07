@@ -18,12 +18,11 @@ export default class Menu {
     setShared(KEY, parents.length ? [...chain(), { id: p.overlay, parents }] : [{ id: p.overlay, parents: [] }]);
   }
 
+  // Only bookkeeping: a press inside a submenu may close this menu first, and closing the
+  // submenu from here would swallow that press. A choice closes the whole chain (closeAll).
   async close() {
     const me = props()?.overlay;
-    const rest = chain().filter((m) => m.id !== me && !m.parents.includes(me));
-    const kids = chain().filter((m) => m.parents.includes(me)).map((m) => m.id);
-    closeOverlays(kids);
-    setShared(KEY, rest);
+    setShared(KEY, chain().filter((m) => m.id !== me));
   }
 
   closeAll() {
@@ -41,7 +40,7 @@ export default class Menu {
     const b = this.bounds[index];
     if (!item?.sub?.length || !b) return;
     const p = props() ?? {};
-    const id = openMenu(item.sub, { x: b.x + b.width - 3, y: b.y - 3 }, { parents: [...(p.parents ?? []), p.overlay] });
+    const id = openMenu(item.sub, { beside: b }, { parents: [...(p.parents ?? []), p.overlay] });
     this.sub = { id, index };
   }
 

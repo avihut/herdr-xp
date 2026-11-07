@@ -15,6 +15,7 @@ export function programsMenu(agents) {
   return [
     { label: "Accessories", icon: "programs", sub: [
       { label: "Games", icon: "programs", sub: [
+        { label: "FreeCell", icon: "freecell", act: { open: "freecell" } },
         { label: "Minesweeper", icon: "mines", act: { open: "mines" } },
         { label: "Solitaire", icon: "sol", act: { open: "sol" } },
         { label: "Spider Solitaire", icon: "spider", act: { open: "spider" } },
@@ -49,8 +50,8 @@ export default class StartMenu {
     });
   }
 
+  // No closing of the open submenu here: a press inside it may close the Start menu first.
   async close() {
-    if (this.sub) closeOverlays([this.sub.id]);
     setShared("winxp.start", null);
     setShared("winxp.startClosedAt", Date.now());
   }
@@ -67,7 +68,8 @@ export default class StartMenu {
     this.sub = null;
     const b = this.bounds[key];
     if (!items || !b) return;
-    const id = openMenu(items, { x: b.x + b.width - 2, y: b.y - 2 }, { parents: [props()?.overlay] });
+    // All Programs sits at the bottom: its menu grows upward from the row, as in XP.
+    const id = openMenu(items, { beside: b }, { parents: [props()?.overlay], bottom: key === "all" });
     this.sub = { key, id };
   }
 

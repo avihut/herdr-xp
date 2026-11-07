@@ -10,7 +10,7 @@
 //   balloon     a notification balloon above the tray
 //   mycomputer, bin   Explorer windows with the task pane
 //   taskman     Task Manager
-//   mines, sol, spider   Minesweeper, Solitaire, Spider Solitaire
+//   mines, sol, spider, freecell   Minesweeper and the card games (cardtable.js)
 
 import { View, div } from "gpui-kit";
 import { props } from "herdr";
@@ -26,11 +26,12 @@ import TaskMan from "./taskman.js";
 import Mines from "./mines.js";
 import Sol from "./sol.js";
 import Spider from "./spider.js";
+import FreeCell from "./freecell.js";
 
 const ROLES = {
   taskbar: Taskbar, desktop: Desktop, window: PaneWindow, start: StartMenu, menu: Menu, dialog: Dialog,
   boot: Boot, welcome: Welcome, balloon: Balloon, mycomputer: Explorer, bin: Explorer, taskman: TaskMan,
-  mines: Mines, sol: Sol, spider: Spider,
+  mines: Mines, sol: Sol, spider: Spider, freecell: FreeCell,
 };
 
 export default class WinXP extends View {

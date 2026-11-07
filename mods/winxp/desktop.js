@@ -123,6 +123,7 @@ export default class Desktop {
       .child(this.icon(P, "cmd", "cmd", "Command Prompt", { open: () => run("tab.new", {}) }))
       .child(this.icon(P, "mines", "mines", "Minesweeper", { open: () => openWindow("mines") }))
       .child(this.icon(P, "sol", "sol", "Solitaire", { open: () => openWindow("sol") }))
-      .child(this.icon(P, "spider", "spider", "Spider Solitaire", { open: () => openWindow("spider") }));
+      .child(this.icon(P, "spider", "spider", "Spider Solitaire", { open: () => openWindow("spider") }))
+      .child(this.icon(P, "freecell", "freecell", "FreeCell", { open: () => openWindow("freecell") }));
   }
 }

@@ -1,3 +1,6 @@
+import {View as WorkspaceTreeView} from 'gpui-kit';
+import {props as workspaceTreeProps} from 'herdr';
+import {WorkspaceTree,initSpaceHierarchy,primaryRows,nestedSpaceRow} from './workspace-tree.js';
 // Herdr XP: a Windows XP-style layout for the Herdr app, as one mod in roles.
 // The layout and overlays give each copy props { role }:
 //   taskbar     start button, Quick Launch, tab buttons, notification area;
@@ -36,7 +39,7 @@ const ROLES = {
   mines: Mines, sol: Sol, spider: Spider, freecell: FreeCell, panedrag: PaneDrag,
 };
 
-export default class WinXP extends View {
+class WinXP extends View {
   init(p, cx) {
     const pr = props() ?? p ?? {};
     const R = ROLES[pr.role];
@@ -52,4 +55,10 @@ export default class WinXP extends View {
   async close(cx) {
     await this.role?.close?.(cx);
   }
+}
+
+export default class GroupedLayout extends WinXP {
+ init(p,cx){const pr={...(p??{}),...(workspaceTreeProps()??{})};if(pr.role==='workspace-tree'){this.workspaceTree=new WorkspaceTree();this.workspaceTree.init(pr,cx);}else {super.init?.(p,cx);if(['side','sidebar','desktop'].includes(pr.role))this.hierarchyReader=initSpaceHierarchy(cx);}}
+ render(cx){return this.workspaceTree?this.workspaceTree.render(cx):super.render(cx);}
+ async close(cx){if(this.workspaceTree)await this.workspaceTree.close?.(cx);else await super.close?.(cx);}
 }

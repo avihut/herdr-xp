@@ -2,3 +2,5 @@
 # Editor helpers that `herdr-app check` writes into a mod folder
 mods/winxp/gpui-kit.d.ts
 mods/winxp/jsconfig.json
+# Python byte-code from running the installer and its tests
+__pycache__/

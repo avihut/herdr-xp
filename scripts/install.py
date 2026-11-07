@@ -13,6 +13,7 @@ import os
 import shutil
 import sys
 import tempfile
+import subprocess
 import time
 from pathlib import Path
 
@@ -59,29 +60,60 @@ def merge_keys(remove=False):
 def install():
     if not HOME.is_dir():
         sys.exit(f"{HOME} not found: open the Herdr app once first.")
-    for rel in FILES:
-        dst = HOME / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(REPO / rel, dst)
-        print(f"  {rel}")
-    # The mod goes in whole: staged beside mods/, then swapped in with renames, so Herdr reloads
-    # it once instead of once per file (and never sees a folder without mod.json).
     dst = HOME / MOD
     dst.parent.mkdir(parents=True, exist_ok=True)
-    stage = HOME / f".winxp-staging-{os.getpid()}"
-    old = HOME / f".winxp-old-{os.getpid()}"
+    work = Path(tempfile.mkdtemp(prefix=".winxp-staging-", dir=HOME))
+    stage = work / "winxp"
+    backup = HOME / "backups" / ("winxp-install-" + str(time.time_ns()))
+    old_moved = new_moved = False
+    changed = []
+    external = [*FILES, "keys.json"]
     try:
-        shutil.copytree(REPO / MOD, stage)
+        if dst.exists(): shutil.copytree(dst, stage)
+        else: stage.mkdir()
+        shutil.copytree(REPO / MOD, stage, dirs_exist_ok=True)
+        subprocess.run(["herdr-app", "check", str(stage)], check=True, capture_output=True, text=True, timeout=45)
+        backup.mkdir(parents=True)
+        for rel in external:
+            src = HOME / rel
+            if src.exists():
+                saved = backup / rel
+                saved.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, saved)
         if dst.exists():
-            os.replace(dst, old)
+            os.replace(dst, backup / "winxp")
+            old_moved = True
         os.replace(stage, dst)
-    finally:
-        shutil.rmtree(stage, ignore_errors=True)
-        shutil.rmtree(old, ignore_errors=True)
-    print(f"  {MOD}/")
-    if merge_keys():
-        print("  keys.json: Ctrl+Esc opens the Start menu")
-    print("Installed. Switch to it with Cmd+Shift+L, or: herdr-app do layout.switch '{\"name\":\"winxp\"}'")
+        new_moved = True
+        for rel in FILES:
+            target = HOME / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            temp = work / "file"
+            shutil.copy2(REPO / rel, temp)
+            os.replace(temp, target)
+            changed.append(rel)
+        changed.append("keys.json")
+        merge_keys()
+    except Exception:
+        failures = []
+        for rel in reversed(changed):
+            try:
+                saved = backup / rel
+                if saved.exists(): shutil.copy2(saved, HOME / rel)
+                else: (HOME / rel).unlink(missing_ok=True)
+            except Exception as exc: failures.append(exc)
+        try:
+            if new_moved: shutil.rmtree(dst)
+            if old_moved: os.replace(backup / "winxp", dst)
+        except Exception as exc: failures.append(exc)
+        if failures:
+            print(f"Rollback incomplete; retain recovery files: {backup} and {work}", file=sys.stderr)
+        else:
+            shutil.rmtree(work, ignore_errors=True)
+        raise
+    else:
+        shutil.rmtree(work, ignore_errors=True)
+    print(f"Installed complete XP folder. Backup: {backup}. Current layout unchanged.")
 
 
 def uninstall():

@@ -116,3 +116,7 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
 ## Optional pane names
 
 With [Pane Rename](https://github.com/avihut/herdr-pane-rename) installed, Cmd+F2 or the title-bar context menu’s **Rename Pane…** opens the XP-styled name dialog. Names appear consistently in window titles, taskbar groups, drag previews, and Task Manager. Empty names restore XP’s automatic titles. The title-bar menu reads the optional capability manifest once when opening and hides Rename when unavailable. Terminal right-clicks use the rename menu when installed; Herdr falls back to its default menu if it is absent.
+
+## Primary space hierarchy
+
+Parent and child spaces appear directly in the desktop folders and My Computer Explorer, using the layout’s native styling. Parents keep their own tabs and terminals and remain selectable. Expansion affects child spaces only; tabs stay in the normal tab bar. Relationships use the shared per-machine hierarchy. There is no extra hierarchy selector. Desktop shows root spaces; opening a parent selects its workspace and explores its child folders. Explorer provides Back, Forward, Up, an address path, and Open this workspace. Games remains a separate desktop icon and folder.

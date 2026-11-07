@@ -1,3 +1,4 @@
+import {primaryForest} from './workspace-tree.js';
 // The desktop: icons down the left edge of the wallpaper. My Computer, the
 // Recycle Bin, each space as a folder (the shown one selected), Command
 // Prompt and the Games folder (its own icon, cards and a joystick, so it
@@ -88,7 +89,7 @@ export default class Desktop {
   render(cx) {
     this.syncWallpaper(cx);
     const P = pal();
-    const sp = spaces();
+    const sp = primaryForest();
     return v_flex()
       .id("xp-desktop")
       .size_full()
@@ -112,9 +113,10 @@ export default class Desktop {
         sp.map((s) =>
           this.icon(P, `s-${s.id}`, s.active ? "folder-open" : "folder", s.name, {
             selected: this.sel === `s-${s.id}` || (this.sel === null && s.active),
-            open: () => run("space.select", { id: s.id }),
+            open: () => { run("space.select", { id:s.id }); if(s.children.length)openWindow("mycomputer",{space:s.id}); },
             menu: () => [
               { label: "Open", bold: true, act: { run: ["space.select", { id: s.id }] } },
+              ...(s.children.length ? [{label:"Explore child spaces",icon:"folder",act:{open:"mycomputer",props:{space:s.id}}}] : []),
               { label: "New Tab Here", icon: "cmd", act: { run: ["tab.new", { space: s.id }] } },
               { sep: true },
               { label: "Rename", act: { run: ["space.rename", { id: s.id }] } },

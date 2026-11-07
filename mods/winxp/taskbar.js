@@ -8,6 +8,9 @@
 import { spaces, panes, agents, run, shared, setShared, nextCommand, knownAgents, openOverlay, closeOverlay, settings } from "herdr";
 import { div, h_flex, pal, bands, grad, pic, glyph, programIcon, shadowed, own, uiFont, paneTitle, statusColor, openMenu, openDialog, openWindow } from "./kit.js";
 import { MENU_W, MENU_H } from "./start.js";
+import { watchPlacement } from "./panedrag.js";
+import { watchBattery, batteryTip, batteryReport } from "./battery.js";
+import { watchNetwork, networkTip, networkReport, networkName, networkIcon } from "./network.js";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -42,6 +45,8 @@ function lead(tabId) {
 export default class Taskbar {
   init(_p, cx) {
     this.now = new Date();
+    watchBattery(this, cx); // this.battery: the power icon (none on a computer without a battery)
+    watchNetwork(this, cx); // this.network: the connection icon (Ethernet, Wi-Fi or not connected)
     this.quick = [];
     this.bar = null;
     this.expanded = false;
@@ -262,6 +267,66 @@ export default class Taskbar {
     return out;
   }
 
+  // XP's power meter icon: an upright battery cell, dark where it's empty and filled from the
+  // bottom with the charge (green; amber at 25% and under; red at 10%), with the plug while on
+  // AC power. Click for the Power Meter.
+  powerIcon(b) {
+    const color = b.pct <= 10 ? "#ff2a1a" : b.pct <= 25 ? "#ffb000" : "#2ee82e";
+    const fill = Math.max(1, Math.round((b.pct / 100) * 10));
+    return own(
+      div()
+        .id("tray-power")
+        .flex_none()
+        .p(2)
+        .rounded(3)
+        .tooltip(batteryTip(b))
+        .hover((s) => s.bg("#ffffff26"))
+        .on_click(() => openDialog("message", { title: "Power Meter", icon: "info", text: batteryReport(b) }))
+        .child(
+          div()
+            .relative()
+            .w(16)
+            .h(16)
+            .child(div().absolute().left(6).top(0).w(5).h(3).rounded_tl(1).rounded_tr(1).border_1().border_color("#0b1220").bg("#d8dde6"))
+            .child(
+              div()
+                .absolute()
+                .left(4)
+                .top(2)
+                .w(9)
+                .h(14)
+                .rounded(1)
+                .border_1()
+                .border_color("#0b1220")
+                .bg("#1c2430")
+                .child(div().absolute().left(0).bottom(0).w_full().h(Math.round((fill / 10) * 12)).bg(color))
+                .child(div().absolute().left(1).top(0).w(2).h_full().bg("#ffffff").opacity(0.3)),
+            )
+            .when(b.ac, (el) =>
+              el
+                .child(div().absolute().left(0).top(8).child(glyph("plug", 9, "#0b1220")))
+                .child(div().absolute().left(-1).top(7).child(glyph("plug", 9, "#ffffff"))),
+            ),
+        ),
+    );
+  }
+
+  // XP's connection icon: two monitors for a wired connection, a monitor and its radio waves
+  // for Wi-Fi, a red X when there is none. Click for the connection's status.
+  netIcon(n) {
+    return own(
+      div()
+        .id("tray-net")
+        .flex_none()
+        .p(2)
+        .rounded(3)
+        .tooltip(networkTip(n))
+        .hover((s) => s.bg("#ffffff26"))
+        .on_click(() => openDialog("message", { title: `${networkName(n)} Status`, icon: n.kind === "none" ? "warning" : "info", text: networkReport(n) }))
+        .child(pic(networkIcon(n), 16)),
+    );
+  }
+
   tray(P) {
     const all = agents();
     const by = (s) => all.filter((a) => a.status === s);
@@ -287,12 +352,13 @@ export default class Taskbar {
     const done = by("done");
     const always = [
       blocked.length ? dot("blocked", blocked, `${blocked.length} agent${blocked.length === 1 ? " needs" : "s need"} you`) : null,
+      this.network ? this.netIcon(this.network) : null,
+      this.battery ? this.powerIcon(this.battery) : null,
       icon("tray-volume", "volume", "Volume", () => run("app.settings", { section: "alerts" })),
     ];
     const hidden = [
       working.length ? dot("working", working, `${working.length} working`) : null,
       done.length ? dot("done", done, `${done.length} done`) : null,
-      icon("tray-net", "network", "Local Area Connection\nSpeed: 1.0 Gbps\nStatus: Connected"),
       icon("tray-safely", "safely-remove", "Safely Remove Hardware"),
     ].filter(Boolean);
     const chevron = own(
@@ -359,6 +425,7 @@ export default class Taskbar {
 
   render(cx) {
     this.showBalloon();
+    watchPlacement(this, cx); // a window dropped on another's edge goes beside it (panedrag.js)
     const P = pal();
     const space = spaces().find((s) => s.active) ?? spaces()[0];
     return div()

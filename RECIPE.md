@@ -19,7 +19,7 @@ Fonts are Tahoma 11 px for UI text and Trebuchet MS bold 13 px for titles, falli
    - A 100 px green start button with a rounded right end: the four-color flag and "start" in white Trebuchet bold italic 18.
    - Quick Launch between etched dividers.
    - Tab buttons, max 150 px, 22 px high, radius 2: `#3c81f3`, hover `#53a3ff`, pressed `#1e52b7`, with a light top-left edge and a dark right edge.
-   - The notification area on the tray gradient (`#0c59b9 … #095bc9`), with a `#1042af` / `#18bbff` left edge: the chevron, agent counts, volume, the clock.
+   - The notification area on the tray gradient (`#0c59b9 … #095bc9`), with a `#1042af` / `#18bbff` left edge: the chevron, agent counts, the connection, the battery, volume, the clock.
 4. **Start menu, 380 × 448, above the start button.**
    - A 54 px banner (`#1868ce → #4791eb`) holds a 42 px user picture in a 2 px light frame and the user's name in 14 px bold.
    - An orange `#da884a` line fades out at both ends.
@@ -40,13 +40,15 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
   - idle: nothing.
 - **Title bars.**
   - Press to focus the pane; double-click to zoom it.
-  - Drag a title bar onto another window of the tab and the two trade places. While dragging, a see-through outline of the window follows the pointer and the window under it is outlined in selection blue. Let go anywhere else, right-click or press Esc to leave everything where it was. Herdr's own pane grip is off.
+  - Drag a title bar onto another window of the tab. Drop it on that window's title bar or middle and the two trade places. Drop it on the outer quarter of its left, right, top or bottom and the window goes beside it on that side. While dragging, a see-through copy of the window follows the pointer, and selection blue previews where it lands (all of the target, or the half it would take) with a label: Swap, Put Left, Put Right, Put Above, Put Below. Let go anywhere else, right-click or press Esc to leave everything where it was. Herdr's own pane grip is off.
   - Minimize settles the tab, Maximize zooms the pane, Close closes it.
   - Right-click, or click the icon, for Restore, Move ▸ Left/Right/Up/Down, Minimize, Maximize, Split Right, Split Down and Close.
 - **Taskbar.**
   - Click a tab button to show its tab; click the shown one to settle it.
   - With more than five tabs, tabs of one program share a button ("3 Claude Code ▴") that opens a list.
-  - The chevron shows working and done counts, network and Safely Remove Hardware.
+  - The connection icon follows the Mac's primary network every 10 s: two monitors for Ethernet (the tooltip has the link speed), a monitor with radio waves for Wi-Fi, a red X when there's none. Click it for its status.
+  - On a computer with a battery, an upright battery cell shows the charge: green, amber at 25% and under, red at 10% and under, and a plug on AC power. The tooltip reads like XP's ("Fully charged (100%)", "2 hr 5 min (64%) remaining"); click it for the Power Meter.
+  - The chevron shows working and done counts and Safely Remove Hardware.
   - Right-click the taskbar for XP's taskbar menu.
 - **Start menu.**
   - Opens on a press of the start button, or Ctrl+Esc.
@@ -77,6 +79,7 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
   - dialogs: `dialog` (`kind` run, logoff, turnoff, confirm, display, about, cleanup), `boot`, `welcome`;
   - an overlay window for `balloon`;
   - a full-window, frameless popup for `panedrag` (`{ pane, title, bars, press }`), the layer that follows a dragged title bar;
+  - helpers without a role: `battery.js` (`pmset -g batt`) and `network.js` (`scutil --nwi`, `networksetup -listallhardwareports`, `ifconfig`), which the taskbar polls;
   - windows with `key` `winxp-<role>`: `mycomputer`, `bin`, `taskman`, `mines`, `sol`, `spider`, `freecell`.
 - **The card games** share `cardtable.js`, a `CardTable` class that owns the table: drag and drop, click to move, double-click and right-click auto-moves, Undo, F2, the menus, the status bar, table messages, a hint flash and the bouncing win. Each game extends it with its rules (`setup`, `layout`, `canPick`, `canDrop`, `moved`, `clickPile`, `autoMove`, `isWon`, `status`). `cards.js` draws the cards.
 - **Commands.**
@@ -89,6 +92,9 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
 ## Watch out
 
 - A header mod can't start Herdr's pane drag, and gets mouse moves only while the pointer is over it. So `panedrag.js` has the title bar open a full-window popup once the press moves 4 px or leaves the bar. The popup gets the moves and the release wherever they happen. No API reports a pane's position: each title bar records its own box from `on_mouse_down_out`, which gives an element its bounds even for a press outside it. Windows trade places through `pane.swap`, which acts on the focused pane and its neighbor. To swap with a window further away, swap along neighbors and back. Only take a step where one side has exactly one neighbor in that direction.
+- A popup gives its content no height. The drag layer sizes its root to the window, or it is a 0 px strip and the drag does nothing.
+- No command puts a pane beside another. An edge drop parks the window's terminal (`terminal.park`: the pane goes, the program keeps running), focuses the target, and gives the terminal a pane again with `terminal.keep {place: right | down}`. For left or above it then swaps once. Both acknowledge first and apply later, so each step waits until `panes()` shows the change. The taskbar runs this from shared `winxp.place`, because the layer may close mid-move. A mod pane has no terminal, so it can only trade places.
+- Copies of a mod don't share module state. Anything one copy must hand another (the title bar boxes, the drag) goes through `shared`.
 - `h_flex()` centers its children vertically. Two-column bodies (the Start menu, Explorer) must be `div().flex().flex_row()`, or the columns float in the middle.
 - A popup doesn't give its content a definite height. Give the Start menu root an explicit `.w()` / `.h()`, or it shrinks to its rows and leaves a gap above the taskbar.
 - Gradients have two stops. Luna's bars are stacks of bands, made by a `stops()` helper from CSS-style stop lists.

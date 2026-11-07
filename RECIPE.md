@@ -39,9 +39,10 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
   - blocked: a red dot, the tab button turns orange, and a red count appears in the tray (click it to focus the agent);
   - idle: nothing.
 - **Title bars.**
-  - Click to focus the pane; double-click to zoom it.
+  - Press to focus the pane; double-click to zoom it.
+  - Drag a title bar onto another window of the tab and the two trade places. While dragging, a see-through outline of the window follows the pointer and the window under it is outlined in selection blue. Let go anywhere else, right-click or press Esc to leave everything where it was. Herdr's own pane grip is off.
   - Minimize settles the tab, Maximize zooms the pane, Close closes it.
-  - Right-click, or click the icon, for Restore, Minimize, Maximize, Split Right, Split Down and Close.
+  - Right-click, or click the icon, for Restore, Move ▸ Left/Right/Up/Down, Minimize, Maximize, Split Right, Split Down and Close.
 - **Taskbar.**
   - Click a tab button to show its tab; click the shown one to settle it.
   - With more than five tabs, tabs of one program share a button ("3 Claude Code ▴") that opens a list.
@@ -68,13 +69,14 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
   - `keys.json`: `"layout:winxp": {"ctrl-escape": "winxp.start"}`.
 - **Layout tree.**
   - A root column with the theme pair, the wallpaper, `ui_font` Tahoma, the VGA terminal font, `titlebar: "none"` and `traffic_lights`.
-  - A row containing `desktop`, a 96 px block with `window_drag`, and `main`, the `{ "tab": "active" }` block whose pane header is the `window` role.
+  - A row containing `desktop`, a 96 px block with `window_drag`, and `main`, the `{ "tab": "active" }` block whose pane header is the `window` role. `main` has `"movable": false`, which hides Herdr's pane grip; the title bars move windows instead.
   - `taskbar`, a 30 px block with `window_drag`.
 - **Roles** (props `{ role }`):
   - layout roles: `taskbar`, `desktop`, `window`;
   - popups: `start` and `menu` (a cascading menu: `{ items, parents }`);
   - dialogs: `dialog` (`kind` run, logoff, turnoff, confirm, display, about, cleanup), `boot`, `welcome`;
   - an overlay window for `balloon`;
+  - a full-window, frameless popup for `panedrag` (`{ pane, title, bars, press }`), the layer that follows a dragged title bar;
   - windows with `key` `winxp-<role>`: `mycomputer`, `bin`, `taskman`, `mines`, `sol`, `spider`, `freecell`.
 - **The card games** share `cardtable.js`, a `CardTable` class that owns the table: drag and drop, click to move, double-click and right-click auto-moves, Undo, F2, the menus, the status bar, table messages, a hint flash and the bouncing win. Each game extends it with its rules (`setup`, `layout`, `canPick`, `canDrop`, `moved`, `clickPile`, `autoMove`, `isWon`, `status`). `cards.js` draws the cards.
 - **Commands.**
@@ -86,6 +88,7 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
 
 ## Watch out
 
+- A header mod can't start Herdr's pane drag, and gets mouse moves only while the pointer is over it. So `panedrag.js` has the title bar open a full-window popup once the press moves 4 px or leaves the bar. The popup gets the moves and the release wherever they happen. No API reports a pane's position: each title bar records its own box from `on_mouse_down_out`, which gives an element its bounds even for a press outside it. Windows trade places through `pane.swap`, which acts on the focused pane and its neighbor. To swap with a window further away, swap along neighbors and back. Only take a step where one side has exactly one neighbor in that direction.
 - `h_flex()` centers its children vertically. Two-column bodies (the Start menu, Explorer) must be `div().flex().flex_row()`, or the columns float in the middle.
 - A popup doesn't give its content a definite height. Give the Start menu root an explicit `.w()` / `.h()`, or it shrinks to its rows and leaves a gap above the taskbar.
 - Gradients have two stops. Luna's bars are stacks of bands, made by a `stops()` helper from CSS-style stop lists.

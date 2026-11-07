@@ -43,6 +43,7 @@
         {
           "id": "main",
           "type": "block",
+          "movable": false,
           "padding": [
             14,
             14

@@ -1,1 +1,4 @@
 .DS_Store
+# Editor helpers that `herdr-app check` writes into a mod folder
+mods/winxp/gpui-kit.d.ts
+mods/winxp/jsconfig.json

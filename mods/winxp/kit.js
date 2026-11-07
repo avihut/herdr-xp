@@ -328,14 +328,15 @@ export function sfx(name) {
 
 // ---- overlays
 
-function zoom() {
+export function zoom() {
   return Number(settings()?.zoom) || 1;
 }
 
-/** Does what a menu row or button names: { run: [cmd, args] } | { open: role } | { dialog: kind } | { shared: [k, v] } | { boot } */
+/** Does what a menu row or button names: { run: [cmd, args] } | { runs: [[cmd, args], ...] } | { open: role } | { dialog: kind } | { shared: [k, v] } | { boot } */
 export function perform(act) {
   if (!act) return;
   if (act.run) run(act.run[0], act.run[1] ?? {});
+  if (act.runs) for (const [c, a] of act.runs) run(c, a ?? {});
   if (act.open) openWindow(act.open, act.props ?? {});
   if (act.dialog) openDialog(act.dialog, act.props ?? {});
   if (act.shared) setShared(act.shared[0], act.shared[1]);

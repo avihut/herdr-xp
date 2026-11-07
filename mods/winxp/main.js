@@ -3,7 +3,8 @@
 //   taskbar     start button, Quick Launch, tab buttons, notification area;
 //               runs the keys' commands, the first-run boot and the balloons
 //   desktop     icons over the wallpaper; keeps the wallpaper light or dark
-//   window      a pane's title bar (the layout's pane header)
+//   window      a pane's title bar (the layout's pane header); drag it to move the window
+//   panedrag    the see-through layer that follows a dragged title bar (panedrag.js)
 //   start       the Start menu        menu     a popup menu (cascading)
 //   dialog      Run, Log Off, Turn Off, Display Properties, About, ...
 //   boot        the boot screen       welcome  the Welcome screen
@@ -27,11 +28,12 @@ import Mines from "./mines.js";
 import Sol from "./sol.js";
 import Spider from "./spider.js";
 import FreeCell from "./freecell.js";
+import PaneDrag from "./panedrag.js";
 
 const ROLES = {
   taskbar: Taskbar, desktop: Desktop, window: PaneWindow, start: StartMenu, menu: Menu, dialog: Dialog,
   boot: Boot, welcome: Welcome, balloon: Balloon, mycomputer: Explorer, bin: Explorer, taskman: TaskMan,
-  mines: Mines, sol: Sol, spider: Spider, freecell: FreeCell,
+  mines: Mines, sol: Sol, spider: Spider, freecell: FreeCell, panedrag: PaneDrag,
 };
 
 export default class WinXP extends View {

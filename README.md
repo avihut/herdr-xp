@@ -6,7 +6,7 @@ A Windows XP-style layout for the [Herdr](https://herdr.dev) desktop app: Luna-b
 
 ## What's in it
 
-- **Windows.** Every pane is an XP window. Minimize puts its tab away on the taskbar, Maximize zooms the pane, Close closes it. Right-click a title bar for the window menu.
+- **Windows.** Every pane is an XP window. Drag a title bar onto another window to swap the two. Minimize puts its tab away on the taskbar, Maximize zooms the pane, Close closes it. Right-click a title bar for the window menu, where Move steps the window left, right, up or down.
 - **Terminals** look like XP's Command Prompt: black, light gray text, the 16 console colors and a bitmap font. They stay that way in light and dark.
 - **Taskbar.** The start button, Quick Launch (Show Desktop, Command Prompt, your agents), and a button for each tab of the shown space. When more than five tabs are open, a program's tabs share one button with a count. The notification area shows agents waiting for you, has the chevron that shows hidden icons, and the clock. Right-click the taskbar for its menu.
 - **Start menu.** Pinned and often-used programs on the left, with All Programs ▸ Accessories ▸ Games and System Tools. On the right: My Spaces ▸, My Recent Tabs ▸, My Computer, Control Panel, Layouts ▸ (switch to another Herdr layout), Display Properties, Help and Support, Search and Run. At the bottom: Log Off and Turn Off Computer.

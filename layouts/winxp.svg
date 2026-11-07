@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f62cf"/><stop offset="0.6" stop-color="#7fb2ee"/><stop offset="1" stop-color="#cfe4f8"/></linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ccf4c"/><stop offset="1" stop-color="#2f7015"/></linearGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4995ff"/><stop offset="0.2" stop-color="#0865e8"/><stop offset="1" stop-color="#0644b2"/></linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4490e6"/><stop offset="0.2" stop-color="#245edb"/><stop offset="1" stop-color="#1941a5"/></linearGradient>
+    <linearGradient id="start" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#62bb5c"/><stop offset="1" stop-color="#2f8a2c"/></linearGradient>
+    <linearGradient id="tray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#18a6f0"/><stop offset="1" stop-color="#095bbd"/></linearGradient>
+  </defs>
+  <rect width="320" height="200" fill="url(#sky)"/>
+  <path d="M0 132 C 50 112 104 104 164 112 C 216 119 260 132 320 130 L320 200 L0 200 Z" fill="url(#hill)"/>
+  <g fill="#f2c14b" stroke="#a87412" stroke-width="0.6"><rect x="8" y="14" width="14" height="10" rx="1"/><rect x="8" y="34" width="14" height="10" rx="1"/><rect x="8" y="54" width="14" height="10" rx="1"/></g>
+  <rect x="34" y="12" width="276" height="164" rx="5" fill="#0054e3"/>
+  <rect x="34" y="12" width="276" height="16" rx="5" fill="url(#title)"/>
+  <rect x="37" y="28" width="270" height="145" fill="#ffffff"/>
+  <g fill="#3a3a3a"><rect x="43" y="34" width="90" height="4" rx="1"/><rect x="43" y="43" width="150" height="4" rx="1"/><rect x="43" y="52" width="120" height="4" rx="1"/></g>
+  <rect x="44" y="16" width="70" height="7" rx="1" fill="#ffffff" opacity="0.9"/>
+  <rect x="270" y="15" width="10" height="10" rx="2" fill="#2d6fe0" stroke="#fff" stroke-width="0.8"/><rect x="283" y="15" width="10" height="10" rx="2" fill="#2d6fe0" stroke="#fff" stroke-width="0.8"/><rect x="296" y="15" width="10" height="10" rx="2" fill="#d8431f" stroke="#fff" stroke-width="0.8"/>
+  <rect y="184" width="320" height="16" fill="url(#bar)"/>
+  <path d="M0 184 H44 Q52 184 52 192 Q52 200 44 200 H0 Z" fill="url(#start)"/>
+  <text x="11" y="196" font-family="Trebuchet MS, sans-serif" font-style="italic" font-weight="700" font-size="10" fill="#ffffff">start</text>
+  <rect x="64" y="186" width="70" height="12" rx="2" fill="#1a4cad" stroke="#0f3a8c" stroke-width="0.6"/>
+  <rect x="270" y="184" width="50" height="16" fill="url(#tray)"/>
+</svg>

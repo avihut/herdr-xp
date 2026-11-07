@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice"><!-- winxp:day -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f62cf"/><stop offset="0.45" stop-color="#5e9ce8"/><stop offset="0.7" stop-color="#a9cdf3"/><stop offset="1" stop-color="#d6e8f8"/>
+    </linearGradient>
+    <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a8d47a"/><stop offset="1" stop-color="#6fae45"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8ccf4c"/><stop offset="0.25" stop-color="#5fae2f"/><stop offset="0.7" stop-color="#3e8a1d"/><stop offset="1" stop-color="#2b6a12"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0.42" cy="0.18" r="0.5">
+      <stop offset="0" stop-color="#c6ee86" stop-opacity="0.55"/><stop offset="1" stop-color="#c6ee86" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <g fill="#ffffff" filter="url(#soft)">
+    <g opacity="0.9"><ellipse cx="260" cy="210" rx="170" ry="38"/><ellipse cx="330" cy="185" rx="95" ry="40"/><ellipse cx="190" cy="196" rx="80" ry="30"/></g>
+    <g opacity="0.8"><ellipse cx="1130" cy="150" rx="210" ry="40"/><ellipse cx="1210" cy="122" rx="110" ry="44"/><ellipse cx="1050" cy="134" rx="90" ry="32"/></g>
+    <g opacity="0.6"><ellipse cx="720" cy="300" rx="150" ry="26"/><ellipse cx="780" cy="284" rx="80" ry="28"/></g>
+    <g opacity="0.5"><ellipse cx="1450" cy="360" rx="120" ry="22"/></g>
+  </g>
+  <path d="M0 640 C 260 600 420 600 620 630 C 880 668 1120 590 1600 610 L1600 1000 L0 1000 Z" fill="url(#far)" opacity="0.85"/>
+  <path d="M0 700 C 240 610 520 560 820 600 C 1080 634 1300 700 1600 690 L1600 1000 L0 1000 Z" fill="url(#hill)"/>
+  <path d="M0 700 C 240 610 520 560 820 600 C 1080 634 1300 700 1600 690 L1600 1000 L0 1000 Z" fill="url(#sheen)"/>
+</svg>

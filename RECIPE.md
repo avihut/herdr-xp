@@ -1,0 +1,102 @@
+# Herdr XP
+
+The whole Herdr window as a Windows XP desktop. A Luna-blue taskbar runs along the bottom, with a green start button and the two-column Start menu. A column of desktop icons sits over a wallpaper of a green hill under a blue sky (by day) or under stars (by night). Every pane is an XP window with a Luna title bar around a black Command Prompt. There are XP's games, Explorer windows, Task Manager, dialogs and the Welcome screen.
+
+![Herdr XP](preview.png)
+
+## What you see
+
+Fonts are Tahoma 11 px for UI text and Trebuchet MS bold 13 px for titles, falling back to Verdana or DejaVu Sans. Terminals use PxPlus IBM VGA 8x16 at 16 px, which ships with Herdr's Windows 98 layout.
+
+1. **Desktop column, 96 px, left.** Icons are 34 px, each with a white 11 px label carrying a 1 px dark shadow; the selected icon's label is on `#316ac5`. From the top: My Computer, Recycle Bin, one folder per space (the shown space selected), Command Prompt, Minesweeper, Solitaire, Spider Solitaire. There is 40 px of room at the top for the macOS traffic lights at (12, 12).
+2. **Windows, the rest above the taskbar.** The shown tab's panes sit 10 px apart, with 14 px of padding. Each has:
+   - a 3 px frame (`border` theme color, `accent` when focused), radius 7;
+   - a 30 px title bar: a 16 px icon, a bold white title with a `#0f1089` shadow, and three 21 px caption buttons (blue, blue, red-orange, white edge, radius 3);
+   - the active bar in XP.css's gradient `#0997ff → #0053ee 8% → #0050ee 40% → #0066ff 88% … #003dd7 96%`;
+   - an inactive bar in the same shape in faded blue.
+3. **Taskbar, 30 px.**
+   - Luna's gradient from the winXP clone, 16 stops, `#1f2f86` at the top to `#1941a5`.
+   - A 100 px green start button with a rounded right end: the four-color flag and "start" in white Trebuchet bold italic 18.
+   - Quick Launch between etched dividers.
+   - Tab buttons, max 150 px, 22 px high, radius 2: `#3c81f3`, hover `#53a3ff`, pressed `#1e52b7`, with a light top-left edge and a dark right edge.
+   - The notification area on the tray gradient (`#0c59b9 … #095bc9`), with a `#1042af` / `#18bbff` left edge: the chevron, agent counts, volume, the clock.
+4. **Start menu, 380 × 448, above the start button.**
+   - A 54 px banner (`#1868ce → #4791eb`) holds a 42 px user picture in a 2 px light frame and the user's name in 14 px bold.
+   - An orange `#da884a` line fades out at both ends.
+   - Left column: white, 190 px, 34 px rows with 30 px icons.
+   - Right column: `#cbe3ff`, 26 px rows with 22 px icons, ink `#00136b`.
+   - Rows highlight in `#2f71cd`; separators fade out at both ends.
+   - A 36 px footer: Log Off and Turn Off Computer.
+5. **Wallpaper.** The root background is `img/wallpaper-day.svg` or `img/wallpaper-night.svg`, `cover`.
+
+Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus, dialog faces, lists and the Explorer task pane go dark, and the wallpaper turns to night. Terminals are black in both themes.
+
+## How it behaves
+
+- **Agent status.** Every agent status appears on its pane's title bar and its tab's taskbar button:
+  - working: a blue dot;
+  - done: a green dot;
+  - blocked: a red dot, the tab button turns orange, and a red count appears in the tray (click it to focus the agent);
+  - idle: nothing.
+- **Title bars.**
+  - Click to focus the pane; double-click to zoom it.
+  - Minimize settles the tab, Maximize zooms the pane, Close closes it.
+  - Right-click, or click the icon, for Restore, Minimize, Maximize, Split Right, Split Down and Close.
+- **Taskbar.**
+  - Click a tab button to show its tab; click the shown one to settle it.
+  - With more than five tabs, tabs of one program share a button ("3 Claude Code ▴") that opens a list.
+  - The chevron shows working and done counts, network and Safely Remove Hardware.
+  - Right-click the taskbar for XP's taskbar menu.
+- **Start menu.**
+  - Opens on a press of the start button, or Ctrl+Esc.
+  - Hover a row with ▸ to open its submenu to the right: All Programs, My Spaces, My Recent Tabs, Layouts.
+  - A choice closes the menu and acts.
+- **Desktop.**
+  - One click opens an icon. Right-click an icon for its menu: a space's has Open, New Tab Here, Rename, and Delete, which asks first.
+  - Right-click the desktop for Arrange Icons By, Refresh, New ▸ Space or Tab, and Properties.
+- **Wallpaper.** When the theme turns dark or light, the desktop role runs `layout.set` with the other wallpaper. Herdr caches a background by path, so rewriting the file isn't enough.
+- **Welcome screen** (Log Off ▸ Log Off or Switch User). Every layout is a user, the shown one marked. Clicking another switches to it; clicking the shown one logs back on with the startup chime.
+- **First show.** The boot screen (logo, three blue blocks sliding through a bar) shows for 3 s. Then comes the startup chime and the "Take a tour of Herdr XP" balloon.
+- **Desktop Cleanup Wizard nag.** Once a day, after 30 minutes on the layout, as a balloon.
+
+## Built from
+
+- **Files.**
+  - `layouts/winxp.json`.
+  - `themes/winxp.json` (light) and `themes/winxp-dark.json`. Both have black terminals with the 16 console colors; they differ in their panel colors.
+  - `mods/winxp`, one mod with roles.
+  - `keys.json`: `"layout:winxp": {"ctrl-escape": "winxp.start"}`.
+- **Layout tree.**
+  - A root column with the theme pair, the wallpaper, `ui_font` Tahoma, the VGA terminal font, `titlebar: "none"` and `traffic_lights`.
+  - A row containing `desktop`, a 96 px block with `window_drag`, and `main`, the `{ "tab": "active" }` block whose pane header is the `window` role.
+  - `taskbar`, a 30 px block with `window_drag`.
+- **Roles** (props `{ role }`):
+  - layout roles: `taskbar`, `desktop`, `window`;
+  - popups: `start` and `menu` (a cascading menu: `{ items, parents }`);
+  - dialogs: `dialog` (`kind` run, logoff, turnoff, confirm, display, about, cleanup), `boot`, `welcome`;
+  - an overlay window for `balloon`;
+  - windows with `key` `winxp-<role>`: `mycomputer`, `bin`, `taskman`, `mines`, `sol`, `spider`.
+- **Commands.**
+  - `tab.new`, `tab.select`, `tab.settle`, `space.select`, `space.new`, `space.rename`, `space.close`;
+  - `pane.focus`, `pane.zoom`, `pane.close`, `pane.split`, `terminal.kill`, `agent.focus`;
+  - `layout.switch`, `layout.set`, `app.settings`, `app.palette`, `app.help`, `app.quit`, `window.minimize`.
+- **Herdr functions.** `knownAgents()` lists the installed agents, `window.bounds()` positions balloons, `playSound` plays the chimes, and `readTextFile` / `writeTextFile` let Display Properties set `appearance`.
+- **Art.** All of it is original. The `img/` SVGs are drawn by hand. The `sounds/` MP3s are synthesized sine chords (ffmpeg). Colors and sizes come from XP.css and the winXP React clone (both MIT).
+
+## Watch out
+
+- `h_flex()` centers its children vertically. Two-column bodies (the Start menu, Explorer) must be `div().flex().flex_row()`, or the columns float in the middle.
+- A popup doesn't give its content a definite height. Give the Start menu root an explicit `.w()` / `.h()`, or it shrinks to its rows and leaves a gap above the taskbar.
+- Gradients have two stops. Luna's bars are stacks of bands, made by a `stops()` helper from CSS-style stop lists.
+- `InputState` and `Input` come from `gpui-base`, not `gpui-kit`. There is no `line_clamp`; use `max_h` with `overflow_hidden`.
+- Herdr's CLI can't send a mod command. To look at a role, open it as a mod pane: `herdr-app do tab.new --mod winxp --props '{"role":"mines"}'`.
+- Overlay windows can't minimize; their Minimize closes them.
+- The Recycle Bin is always empty, since Herdr closes things for good.
+
+## Done when
+
+- `herdr-app check mods/winxp` passes, and `herdr-app status` shows no errors with the layout shown, in light and in dark.
+- The wallpaper follows the theme within a second of switching the system appearance.
+- Start ▸ Layouts lists each layout once, marks Windows XP, and switches.
+- Minesweeper opens a cell on the first click without a mine. Solitaire moves a card to the foundation on a double-click. Spider puts away a finished King-to-Ace run.
+- Run with `htop` opens a tab running htop. Log Off ▸ Switch User shows the Welcome screen with every layout.

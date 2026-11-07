@@ -1,0 +1,5 @@
+{
+  "layout:winxp": {
+    "ctrl-escape": "winxp.start"
+  }
+}

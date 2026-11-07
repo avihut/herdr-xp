@@ -1,0 +1,98 @@
+{
+  "id": "root",
+  "type": "column",
+  "theme": {
+    "light": "winxp",
+    "dark": "winxp-dark"
+  },
+  "ui_font": "Tahoma",
+  "background": {
+    "image": "mods/winxp/img/wallpaper-day.svg",
+    "fit": "cover"
+  },
+  "titlebar": "none",
+  "traffic_lights": [
+    12,
+    12
+  ],
+  "terminal_padding": [
+    6,
+    4
+  ],
+  "preview": "layouts/winxp.svg",
+  "children": [
+    {
+      "id": "screen",
+      "type": "row",
+      "resizable": false,
+      "children": [
+        {
+          "id": "desktop",
+          "type": "block",
+          "size": {
+            "px": 96
+          },
+          "window_drag": true,
+          "content": {
+            "mod": "winxp",
+            "props": {
+              "role": "desktop"
+            }
+          }
+        },
+        {
+          "id": "main",
+          "type": "block",
+          "padding": [
+            14,
+            14
+          ],
+          "content": {
+            "tab": "active",
+            "pane": {
+              "header": {
+                "content": {
+                  "mod": "winxp",
+                  "props": {
+                    "role": "window"
+                  }
+                },
+                "height": 30,
+                "position": "top",
+                "reveal": "always"
+              },
+              "background": "background",
+              "border": {
+                "width": 3,
+                "color": "border"
+              },
+              "focus": {
+                "width": 3,
+                "color": "accent"
+              },
+              "radius": 7,
+              "gap": 10,
+              "lone": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "taskbar",
+      "type": "block",
+      "size": {
+        "px": 30
+      },
+      "window_drag": true,
+      "content": {
+        "mod": "winxp",
+        "props": {
+          "role": "taskbar"
+        }
+      }
+    }
+  ],
+  "font": "PxPlus IBM VGA 8x16",
+  "font_size": 16
+}

@@ -45,6 +45,7 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
   - Right-click, or click the icon, for Restore, Move ▸ Left/Right/Up/Down, Minimize, Maximize, Split Right, Split Down and Close.
 - **Taskbar.**
   - Click a tab button to show its tab; click the shown one to settle it.
+  - Drag a tab button along the taskbar to reorder the tabs (`tab.move {id, index}`). Past 4 px a press is a drag: the button dims and a 3 px white bar marks where it lands, before or after the button under the pointer (whichever half). A program's group button takes drops too (before its first tab or after its last) but doesn't drag. Dragging off the taskbar cancels, since a block hears no release outside itself. `taborder.js` works out the landing position.
   - With more than five tabs, tabs of one program share a button ("3 Claude Code ▴") that opens a list.
   - The connection icon follows the Mac's primary network every 10 s: two monitors for Ethernet (the tooltip has the link speed), a monitor with radio waves for Wi-Fi, a red X when there's none. Click it for its status.
   - On a computer with a battery, an upright battery cell shows the charge: green, amber at 25% and under, red at 10% and under, and a plug on AC power. The tooltip reads like XP's ("Fully charged (100%)", "2 hr 5 min (64%) remaining"); click it for the Power Meter.

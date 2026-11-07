@@ -2,6 +2,9 @@
 // Prompt, your agents), a button per tab of the shown space (XP groups them
 // by program when they don't fit), and the notification area (the hide-
 // inactive-icons chevron, agents by status, network, volume, the clock).
+// Drag a tab's button along the taskbar to reorder the tabs (tab.move); a white
+// bar shows where it lands. Dragging off the taskbar cancels: Herdr reports no
+// release outside it.
 // It also runs what keys send (`winxp.start` and the rest), the first-run
 // boot screen, and XP's balloon tips.
 
@@ -11,6 +14,9 @@ import { MENU_W, MENU_H } from "./start.js";
 import { watchPlacement } from "./panedrag.js";
 import { watchBattery, batteryTip, batteryReport } from "./battery.js";
 import { watchNetwork, networkTip, networkReport, networkName, networkIcon } from "./network.js";
+import { dropPosition } from "./taborder.js";
+
+const SLOP = 4; // px a press moves before it is a drag, not a click
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -198,6 +204,7 @@ export default class Taskbar {
         .overflow_hidden()
         .bg(bg)
         .hover((s) => s.bg(hover))
+        .when(Boolean(o.dragging), (el) => el.opacity(0.55))
         .tooltip(o.label)
         .child(div().absolute().top(0).left(0).size_full().rounded(2).border_t_1().border_l_1().border_color(o.pressed ? "#00000059" : "#ffffff33"))
         .child(div().absolute().top(0).right(0).w(1).h_full().bg("#0000004d"))
@@ -212,27 +219,103 @@ export default class Taskbar {
             .child(div().flex_1().min_w(0).text_size(11).child(shadowed(o.label, P.taskText, "#00000059", { truncate: true })))
             .when(Boolean(o.group), (el) => el.child(glyph("menu-up", 8, "#ffffff"))),
         )
+        .when(Boolean(o.mark), (el) =>
+          el.child(
+            div()
+              .absolute()
+              .top(0)
+              .w(3)
+              .h_full()
+              .bg("#ffffff")
+              .border_color("#0a246a")
+              .when(o.mark === "before", (b) => b.left(0).border_r_1())
+              .when(o.mark === "after", (b) => b.right(0).border_l_1()),
+          ),
+        )
         .on_mouse_down("left", (e, cx) => {
           cx.stop_propagation();
           o.onDown?.(e);
         })
-        .on_click(() => o.onClick?.()),
+        .when(Boolean(o.onMove), (el) => el.on_mouse_move((e, cx) => o.onMove(e, cx)))
+        .on_click(() => {
+          // The release that ends a drag isn't a click.
+          if (this.tabDrag?.moved || Date.now() - (this.dragEndAt ?? 0) < 300) return;
+          o.onClick?.();
+        }),
     );
   }
 
+  // ---- reordering tabs by dragging their buttons
+  // this.tabDrag = { id, x0, moved, over: { ids, side } } from the press until the release.
+
+  pressTab(id, e) {
+    this.tabDrag = e?.position ? { id, x0: e.position.x, moved: false, over: null } : null;
+  }
+
+  /** The pointer is over a button (ids: its tabs): which half says before or after it. */
+  overButton(ids, e, cx) {
+    const d = this.tabDrag;
+    if (!d || !e?.bounds || !e?.local_position) return;
+    const side = e.local_position.x < e.bounds.width / 2 ? "before" : "after";
+    if (d.over?.side === side && d.over.ids.join() === ids.join()) return;
+    d.over = { ids, side };
+    if (d.moved) cx.notify();
+  }
+
+  /** Any move along the strip: past SLOP it is a drag. */
+  dragMove(e, cx) {
+    const d = this.tabDrag;
+    if (!d || d.moved || !e?.position) return;
+    if (Math.abs(e.position.x - d.x0) > SLOP) {
+      d.moved = true;
+      cx.notify();
+    }
+  }
+
+  dropTab(order, cx) {
+    const d = this.tabDrag;
+    this.tabDrag = null;
+    if (!d) return;
+    if (d.moved) {
+      this.dragEndAt = Date.now();
+      const index = d.over ? dropPosition(order, d.id, d.over.ids, d.over.side) : null;
+      if (index) run("tab.move", { id: d.id, index });
+    }
+    cx.notify();
+  }
+
+  cancelDrag(cx) {
+    if (!this.tabDrag) return;
+    this.tabDrag = null;
+    cx.notify();
+  }
+
+  /** Where the landing bar goes on a button (ids), if the dragged tab would land beside it. */
+  markFor(ids, order) {
+    const d = this.tabDrag;
+    if (!d?.moved || !d.over || d.over.ids.join() !== ids.join()) return null;
+    return dropPosition(order, d.id, ids, d.over.side) ? d.over.side : null;
+  }
+
   tasks(P, tabs) {
+    const order = tabs.map((t) => t.id);
     const info = tabs.map((t) => {
       const p = lead(t.id);
       return { t, p, key: p?.program && !p.program.shell ? p.program.key : "shell", name: p?.program && !p.program.shell ? p.program.name : "Command Prompt" };
     });
     const tabButton = ({ t, p }) => {
       const pressed = t.active && !t.settled;
+      const ids = [t.id];
       return this.taskButton(P, t.id, {
         label: t.named ? t.name : paneTitle(p) || `Tab ${t.index}`,
         icon: programIcon(p?.program, 15, "#ffffff"),
         pressed,
         flash: t.status === "blocked",
         badge: t.status === "working" || t.status === "done" ? t.status : null,
+        dragging: this.tabDrag?.moved && this.tabDrag.id === t.id,
+        mark: this.markFor(ids, order),
+        onDown: (e) => tabs.length > 1 && this.pressTab(t.id, e),
+        onMove: (e, cx) => this.overButton(ids, e, cx),
         onClick: () => (pressed ? run("tab.settle", { id: t.id }) : run("tab.select", { id: t.id })),
       });
     };
@@ -247,6 +330,7 @@ export default class Taskbar {
         continue;
       }
       const active = list.some(({ t }) => t.active && !t.settled);
+      const ids = list.map(({ t }) => t.id);
       const status = list.some(({ t }) => t.status === "blocked") ? "blocked" : list.some(({ t }) => t.status === "working") ? "working" : null;
       out.push(
         this.taskButton(P, `g-${key}`, {
@@ -256,6 +340,8 @@ export default class Taskbar {
           flash: status === "blocked",
           badge: status === "working" ? "working" : null,
           group: true,
+          mark: this.markFor(ids, order),
+          onMove: (e, cx) => this.overButton(ids, e, cx),
           onDown: (e) => {
             const b = e?.bounds;
             const items = list.map(({ t, p }) => ({ label: t.named ? t.name : paneTitle(p) || `Tab ${t.index}`, icon: p?.program && !p.program.shell ? { program: p.program } : "cmd", bold: t.active, act: { run: ["tab.select", { id: t.id }] } }));
@@ -448,7 +534,21 @@ export default class Taskbar {
           .items_center()
           .child(this.startButton(P))
           .child(this.quickLaunch())
-          .child(h_flex().flex_1().min_w(0).h_full().items_center().gap(3).pl(2).pr(6).children(this.tasks(P, space?.tabs ?? [])))
+          .child(
+            h_flex()
+              .id("task-strip")
+              .flex_1()
+              .min_w(0)
+              .h_full()
+              .items_center()
+              .gap(3)
+              .pl(2)
+              .pr(6)
+              .on_mouse_move((e, cx) => this.dragMove(e, cx))
+              .on_mouse_up("left", (_e, cx) => this.dropTab((space?.tabs ?? []).map((t) => t.id), cx))
+              .on_hover((over, cx) => !over && this.cancelDrag(cx))
+              .children(this.tasks(P, space?.tabs ?? [])),
+          )
           .child(this.tray(P)),
       );
   }

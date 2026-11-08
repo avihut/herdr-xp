@@ -2,7 +2,8 @@
 // When an agent needs you (blocked) or finished while you looked away (done), a yellow Office XP
 // balloon offers to take you there. Click the paperclip for a tip. The balloon's "Hide me",
 // Display Properties or Start > All Programs > Accessories > Office Assistant hide and show it
-// (shared winxp.clippy: "off" hides it). Now and then it blinks, looks around, hops, wiggles or
+// (shared winxp.clippy: "off" hides it). An agent's balloon closes itself after a few seconds;
+// a light bulb then shows it has something to say, and a click brings it back. Now and then it blinks, looks around, hops, wiggles or
 // naps (SCRIPT, played natively); "Hold still" stops that. The paperclip is drawn here
 // (img/clippy*.svg), not taken from Office.
 //
@@ -14,6 +15,8 @@
 //   shared winxp.clippy.tip        the tip showing, or null
 //   shared winxp.clippy.dismissed  "<agent address>:<status>" balloons answered or put off
 //   shared winxp.clippy.closed     { key, at }: a balloon closed itself (a choice in it)
+//   shared winxp.clippy.quiet      agent balloons that closed themselves unread: the light bulb
+//   shared winxp.clippy.recall     the one a click on the paperclip brought back
 
 import { image } from "gpui-kit";
 import { agents, shared, setShared, props, closeOverlay, openOverlay } from "herdr";
@@ -42,6 +45,9 @@ const CHARS = 40; // about what fits on a balloon line
 const LINE = 14;
 
 const dismissed = () => shared("winxp.clippy.dismissed") ?? [];
+const quieted = () => shared("winxp.clippy.quiet") ?? [];
+const keyOf = (a) => `${a.address}:${a.status}`;
+const AUTO_CLOSE = 5000; // an agent's balloon closes itself after this, unless pointed at
 
 // Its quirks, played natively: no JavaScript timer redraws anything. A five-minute script (built
 // once, from a fixed seed) says, for each 120 ms tick, which eye drawing shows (img/clippy-*.svg
@@ -111,22 +117,32 @@ export class Assistant {
     return hasSim() ? [...TIPS, SIM_TIP] : TIPS;
   }
 
-  /** The agent to tell you about: one waiting for you first, else one that finished. */
-  news() {
+  /** The agents to tell you about, put-off ones left out, the most pressing last: blocked before
+   *  done, then newest. */
+  items() {
     const done = new Set(dismissed());
-    const list = agents()
+    return agents()
       .filter((a) => (a.status === "blocked" || a.status === "done") && !a.focused)
-      .filter((a) => !done.has(`${a.address}:${a.status}`))
+      .filter((a) => !done.has(keyOf(a)))
       .sort((a, b) => (a.status === "blocked") - (b.status === "blocked") || a.seq - b.seq);
-    return list.pop() ?? null;
+  }
+
+  /** Balloons that closed themselves before you answered: the light bulb's messages. */
+  pending() {
+    const quiet = new Set(quieted());
+    return this.items().filter((a) => quiet.has(keyOf(a)));
   }
 
   /** What the balloon should say now: { key, text, actions: [[label, act]] }, or null. */
   want() {
     if (!this.shown()) return null;
-    const a = this.news();
+    const list = this.items();
+    const quiet = new Set(quieted());
+    const recall = shared("winxp.clippy.recall");
+    const called = recall ? list.find((x) => keyOf(x) === recall) : null;
+    const a = called ?? list.filter((x) => !quiet.has(keyOf(x))).pop();
     if (a) {
-      const key = `${a.address}:${a.status}`;
+      const key = keyOf(a);
       const name = a.program?.name ?? a.app ?? "Your agent";
       const where = `'${a.space_name} \\ ${a.tab_name}'`;
       const text =
@@ -134,7 +150,9 @@ export class Assistant {
           ? `It looks like ${name} in ${where} is waiting for you.\n\nWould you like help?`
           : `It looks like ${name} finished in ${where}.\n\nWant to see what it did?`;
       const put = { shared: ["winxp.clippy.dismissed", [...dismissed(), key]] };
-      return { key: `agent:${key}`, text, actions: [["Take me there", { run: ["agent.focus", { terminal: a.address }], ...put }], ["Not now", put]] };
+      // A new one closes itself after a few seconds (the light bulb keeps it); one brought back
+      // with a click stays until answered.
+      return { key: `agent:${key}:${called ? "again" : "new"}`, agent: key, auto: !called, text, actions: [["Take me there", { run: ["agent.focus", { terminal: a.address }], ...put }], ["Not now", put]] };
     }
     const tip = shared("winxp.clippy.tip");
     if (tip === null || tip === undefined) return null;
@@ -160,6 +178,10 @@ export class Assistant {
       return agents().some((x) => x.address === k.slice(0, at) && x.status === k.slice(at + 1));
     });
     if (keep.length !== dismissed().length) setShared("winxp.clippy.dismissed", keep);
+    const live = new Set(this.items().map(keyOf));
+    const stillQuiet = quieted().filter((k) => live.has(k));
+    if (stillQuiet.length !== quieted().length) setShared("winxp.clippy.quiet", stillQuiet);
+    if (shared("winxp.clippy.recall") && !live.has(shared("winxp.clippy.recall"))) setShared("winxp.clippy.recall", null);
     if (!this.shown() && shared("winxp.clippy.tip") != null) setShared("winxp.clippy.tip", null);
     const want = this.want();
     const closed = shared("winxp.clippy.closed");
@@ -181,7 +203,7 @@ export class Assistant {
       width: BALLOON_W * z,
       height: h * z,
       at: { x: (LEFT - 6) * z, y: Math.max(0, win.height - (TASKBAR + BOTTOM + CLIP_H + h - 4) * z) },
-      props: { role: "clippy", key: want.key, text: want.text, actions: want.actions },
+      props: { role: "clippy", key: want.key, agent: want.agent ?? null, auto: Boolean(want.auto), text: want.text, actions: want.actions },
     });
     this.balloon = { key: want.key, id, at: Date.now() };
     setShared("winxp.clippy.balloonId", id);
@@ -193,6 +215,7 @@ export class Assistant {
   element(talking) {
     if (!this.shown()) return null;
     const lively = !talking && !this.still();
+    const waiting = this.pending().length;
     const img = (name) => image(`mods/winxp/img/${name}.svg`).absolute().top(0).left(0).w(CLIP_W).h(CLIP_H);
     // A pose's layer shows as wide as its invisible text: none, or all of the paperclip.
     const layer = (name) =>
@@ -212,7 +235,9 @@ export class Assistant {
       .h(CLIP_H)
       .when(talking, (el) => el.loop("top", { from: 0, to: -5, period: 800 }))
       .child(img("clippy"))
-      .when(lively, (el) => el.children(LAYERS.map(layer)));
+      .when(lively, (el) => el.children(LAYERS.map(layer)))
+      // Office's light bulb: it has something to say (balloons that closed unread).
+      .when(waiting > 0, (el) => el.child(image("mods/winxp/img/clippy-bulb.svg").absolute().top(-8).right(-6).w(22).h(22)));
     return own(
       v_flex()
         .id("clippy")
@@ -221,10 +246,19 @@ export class Assistant {
         .bottom(BOTTOM - REST_LIFT * LIFT_PX)
         .items_start()
         .cursor_pointer()
-        .tooltip("Office Assistant")
+        .tooltip(waiting ? `Office Assistant: ${waiting} message${waiting === 1 ? "" : "s"} (click to see)` : "Office Assistant")
         .on_click((_e, cx) => {
-          const tip = shared("winxp.clippy.tip");
-          setShared("winxp.clippy.tip", tip == null ? Math.floor(Math.random() * this.tips().length) : null);
+          // With messages waiting (the light bulb), a click brings the latest back; again, it goes.
+          const waiting = this.pending();
+          const recall = shared("winxp.clippy.recall");
+          if (recall) setShared("winxp.clippy.recall", null);
+          else if (waiting.length) {
+            setShared("winxp.clippy.tip", null);
+            setShared("winxp.clippy.recall", keyOf(waiting[waiting.length - 1]));
+          } else {
+            const tip = shared("winxp.clippy.tip");
+            setShared("winxp.clippy.tip", tip == null ? Math.floor(Math.random() * this.tips().length) : null);
+          }
           sfx("clippy");
           cx.notify();
         })
@@ -246,7 +280,18 @@ export class Assistant {
 /** The balloon (the clippy role): Office XP's pale yellow, rounded, a thin dark edge, blue
  *  bullets for the choices, and a tail down to the paperclip. A choice acts, then closes it. */
 export default class ClippyBalloon {
-  init() {}
+  init(_p, cx) {
+    const p = props() ?? {};
+    if (!p.auto || !cx) return;
+    // Closes itself unread after a few seconds (the light bulb remembers it), waiting while the
+    // pointer is over it. One timer at a time, only while it's open.
+    const tick = (c) => {
+      if (this.hovered) return c.timer.after(1500, (d) => tick(d ?? c));
+      setShared("winxp.clippy.quiet", [...new Set([...quieted(), p.agent])]);
+      closeOverlay(p.overlay);
+    };
+    cx.timer.after(AUTO_CLOSE, (c) => tick(c ?? cx));
+  }
 
   async close() {
     setShared("winxp.clippy.closed", { key: props()?.key, at: Date.now() });
@@ -258,6 +303,9 @@ export default class ClippyBalloon {
     const link = P.dark ? "#9cc2ff" : "#0b3fa8";
     return v_flex()
       .id("xp-clippy-balloon")
+      .on_hover((over) => {
+        this.hovered = over;
+      })
       .size_full()
       .font_family(uiFont())
       .child(

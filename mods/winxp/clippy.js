@@ -2,7 +2,8 @@
 // When an agent needs you (blocked) or finished while you looked away (done), a yellow Office XP
 // balloon offers to take you there. Click the paperclip for a tip. The balloon's "Hide me",
 // Display Properties or Start > All Programs > Accessories > Office Assistant hide and show it
-// (shared winxp.clippy: "off" hides it). The paperclip is drawn here (img/clippy.svg), not taken
+// (shared winxp.clippy: "off" hides it). Every so often it blinks, looks around, hops, wiggles,
+// stretches, naps or leans in (ACTS). The paperclip is drawn here (img/clippy*.svg), not taken
 // from Office.
 //
 // The desktop draws the paperclip itself (Assistant.element), straight on the wallpaper: Herdr
@@ -42,10 +43,28 @@ const LINE = 14;
 
 const dismissed = () => shared("winxp.clippy.dismissed") ?? [];
 
+// Its quirks, every so often while it has nothing to say: a blink every 4-12 s, and every 40-90 s
+// one of these. A pose is an eye drawing (img/clippy-*.svg); dx, dy, w and h move and stretch it,
+// animated natively (transition). Each step holds for its ms and changes only what it names.
+const POSE = { rest: "clippy", front: "clippy-front", left: "clippy-left", up: "clippy-up", shut: "clippy-shut" };
+const REST = { pose: "rest", dx: 0, dy: 0, w: CLIP_W, h: CLIP_H };
+const ACTS = {
+  lookAround: [[450, { pose: "left" }], [380, { pose: "up" }], [480, { pose: "front" }], [260, { pose: "rest" }]],
+  huh: [[160, { pose: "up", dy: -12 }], [720, { dy: 0 }]],
+  bounce: [[150, { dy: -12 }], [150, { dy: 0 }], [130, { dy: -7 }], [130, { dy: 0 }], [110, { dy: -3 }], [110, { dy: 0 }]],
+  wiggle: [[90, { dx: 4 }], [90, { dx: -4 }], [90, { dx: 4 }], [90, { dx: -4 }], [90, { dx: 2 }], [90, { dx: 0 }]],
+  stretch: [[230, { w: CLIP_W - 4, h: CLIP_H + 12, dx: 2, dy: -12 }], [190, { w: CLIP_W + 6, h: CLIP_H - 8, dx: -3, dy: 8 }], [210, { w: CLIP_W, h: CLIP_H, dx: 0, dy: 0 }]],
+  nap: [[300, { pose: "shut" }], [1700, { dy: 4 }], [170, { pose: "up", dy: -10 }], [650, { dy: 0 }]],
+  lean: [[260, { pose: "front", w: CLIP_W + 8, h: CLIP_H + 10, dx: -4, dy: -10 }], [950, {}], [260, { w: CLIP_W, h: CLIP_H, dx: 0, dy: 0 }]],
+};
+const HOP = [[120, { pose: "up", dy: -8 }], [220, { dy: 0 }]];
+
 /** The desktop's half: the paperclip, and the balloon it keeps open or closed. */
 export class Assistant {
   constructor() {
     this.balloon = null; // { key, id, at }
+    this.frame = { ...REST };
+    this.playing = false;
     // A balloon left open by the previous build of the mod (a reload) has no owner now.
     const old = shared("winxp.clippy.balloonId");
     if (old) closeOverlays([old]);
@@ -53,6 +72,46 @@ export class Assistant {
 
   shown() {
     return shared("winxp.clippy") !== "off";
+  }
+
+  /** Starts its quirks (the desktop calls this from init). */
+  start(cx) {
+    const later = (min, span, fn) => cx.timer.after(min + Math.random() * span, (c) => fn(c ?? cx));
+    const blink = (x) => {
+      if (this.idle()) this.play([[140, { pose: "shut" }]], x);
+      later(4000, 8000, blink);
+    };
+    const act = (x) => {
+      const names = Object.keys(ACTS);
+      if (this.idle()) this.play(ACTS[names[Math.floor(Math.random() * names.length)]], x);
+      later(40000, 50000, act);
+    };
+    later(4000, 8000, blink);
+    later(20000, 30000, act);
+  }
+
+  idle() {
+    return this.shown() && !this.playing && !this.balloon;
+  }
+
+  /** Plays steps ([ms, change]) in turn, then back to rest. */
+  play(steps, cx) {
+    this.playing = true;
+    let i = 0;
+    const next = (c) => {
+      const x = c ?? cx;
+      if (i >= steps.length) {
+        this.frame = { ...REST };
+        this.playing = false;
+        x.notify();
+        return;
+      }
+      const [ms, change] = steps[i++];
+      this.frame = { ...this.frame, ...change };
+      x.notify();
+      x.timer.after(ms, next);
+    };
+    next(cx);
   }
 
   tips() {
@@ -134,9 +193,11 @@ export class Assistant {
     setShared("winxp.clippy.balloonId", id);
   }
 
-  /** The paperclip, for the desktop to place over its strip's bottom; null while hidden. */
+  /** The paperclip, for the desktop to place over its strip's bottom; null while hidden. While an
+   *  agent's balloon is up it bobs; otherwise it shows its current quirk's frame. */
   element(talking) {
     if (!this.shown()) return null;
+    const f = talking ? REST : this.frame;
     return own(
       div()
         .id("clippy")
@@ -151,14 +212,27 @@ export class Assistant {
           const tip = shared("winxp.clippy.tip");
           setShared("winxp.clippy.tip", tip == null ? Math.floor(Math.random() * this.tips().length) : null);
           sfx("clippy");
+          if (!this.playing) this.play(HOP, cx);
           cx.notify();
         })
+        // Every pose, drawn unseen at full size, so a quirk never waits for its picture to load.
+        .child(div().absolute().top(0).left(0).size_full().opacity(0).children(Object.values(POSE).map((p) => image(`mods/winxp/img/${p}.svg`).absolute().top(0).left(0).size_full())))
         .child(
           div()
             .relative()
-            .size_full()
+            .top(f.dy)
+            .left(f.dx)
+            .w(f.w)
+            .h(f.h)
             .when(talking, (el) => el.loop("top", { from: 0, to: -5, period: 800 }))
-            .child(image("mods/winxp/img/clippy.svg").w(CLIP_W).h(CLIP_H)),
+            .when(!talking, (el) =>
+              el
+                .transition("top", { duration: 140, easing: "ease-out" })
+                .transition("left", { duration: 90 })
+                .transition("width", { duration: 180, easing: "ease-out" })
+                .transition("height", { duration: 180, easing: "ease-out" }),
+            )
+            .child(image(`mods/winxp/img/${POSE[f.pose] ?? POSE.rest}.svg`).size_full()),
         ),
     );
   }

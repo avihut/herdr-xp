@@ -8,7 +8,7 @@ import { renamedPane, openPaneRename } from "./pane-rename.js";
 
 import { div, svg, image, PathBuilder, Background } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { theme, fonts, home, run, openOverlay, closeOverlay, setShared, shared, layouts, layout, settings, playSound, panes, readTextFile, appHome } from "herdr";
+import { theme, fonts, home, run, openOverlay, closeOverlay, setShared, shared, layouts, layout, settings, playSound, panes, focused, readTextFile, appHome } from "herdr";
 
 export const ASSETS = "mods/winxp/img";
 
@@ -229,13 +229,12 @@ export function isBrowser(program) {
   return /terminal-browser/i.test(`${program?.key ?? ""} ${program?.name ?? ""} ${program?.command ?? ""}`);
 }
 
-/** Opens the browser: beside the focused window, or in a tab of its own when the shown tab is
- *  already crowded (four windows or more). url: a page, or the browser's own start page. */
+/** Opens the browser in a new window (pane) beside the focused one, in the shown tab; with no
+ *  window to split, in a tab of its own. url: a page, or the browser's own start page. */
 export function openBrowser(url) {
   const argv = ["terminal-browser", ...(url ? [url] : [])];
-  const shown = panes().filter((p) => p.tab === panes().find((x) => x.focused)?.tab);
-  if (shown.length >= 4) run("tab.new", { name: "Internet", argv });
-  else run("pane.split", { direction: "right", argv });
+  if (focused()?.tab) run("pane.split", { direction: "right", argv });
+  else run("tab.new", { name: "Internet", argv });
 }
 
 export function programIcon(program, size, color) {

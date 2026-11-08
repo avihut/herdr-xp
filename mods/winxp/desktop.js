@@ -12,7 +12,9 @@
 // light it points the layout's background at the night or the day picture
 // (layout.set; Herdr caches a background by path).
 // Space folders drag to reorder (space.move): a root folder among the root folders, a child space
-// among its siblings. A white bar shows where it lands; letting go anywhere else does nothing.
+// among its siblings. A white bar shows where it lands, below a whole group when the space it
+// lands after has child spaces showing; pointing at those child spaces means after the group.
+// Letting go anywhere else does nothing.
 
 import { run, layout, shared, spaces } from "herdr";
 import { div, h_flex, v_flex, pal, pic, isDark, uiFont, openMenu, openWindow, openDialog } from "./kit.js";
@@ -110,7 +112,7 @@ export default class Desktop {
   // this.drag = { id, parent, machine, x0, y0, moved, over: { id, side } } from the press to the release.
 
   press(s, e) {
-    this.drag = e?.position ? { id: s.id, parent: s.nesting.parentId, machine: s.machine ?? null, x0: e.position.x, y0: e.position.y, moved: false, over: null } : null;
+    this.drag = e?.position ? { id: s.id, parent: s.nesting.parentId ?? null, machine: s.machine ?? null, x0: e.position.x, y0: e.position.y, moved: false, over: null } : null;
   }
 
   justDragged() {
@@ -127,26 +129,61 @@ export default class Desktop {
     }
   }
 
-  /** A space can land beside s only among its own siblings, on the same machine. */
-  sibling(s) {
+  /** The sibling of the dragged space (same parent, same machine) that s is, or that s sits
+   *  under (under: true, so the drop goes after that sibling's group), or null: s is the dragged
+   *  space, under it, or elsewhere in the tree. this.tree comes from the last render. */
+  landingFor(s) {
     const d = this.drag;
-    return Boolean(d) && s.id !== d.id && s.nesting.parentId === d.parent && (s.machine ?? null) === d.machine;
+    if (!d) return null;
+    let id = s.id;
+    for (let hops = 0; id && hops < 64; hops++) {
+      if (id === d.id) return null;
+      const node = this.tree?.get(id);
+      if (!node) return null;
+      if (node.parent === d.parent && node.machine === d.machine) return { id, under: id !== s.id };
+      id = node.parent;
+    }
+    return null;
+  }
+
+  /** Would the drop move the space among its siblings at all? */
+  moves(over) {
+    const d = this.drag;
+    if (!d || !over) return false;
+    const sibs = (this.rows ?? []).filter((r) => (r.nesting.parentId ?? null) === d.parent && (r.machine ?? null) === d.machine).map((r) => r.id);
+    const a = sibs.indexOf(d.id);
+    const t = sibs.indexOf(over.id);
+    if (a < 0 || t < 0 || a === t) return false;
+    return over.side === "before" ? a !== t - 1 : a !== t + 1;
+  }
+
+  setOver(over, cx) {
+    const d = this.drag;
+    if (over?.id === d.over?.id && over?.side === d.over?.side) return;
+    d.over = over;
+    cx.notify();
   }
 
   sideOf(e) {
     return e?.local_position && e?.bounds ? (e.local_position.y < e.bounds.height / 2 ? "before" : "after") : null;
   }
 
-  /** The pointer is over space s: which half says before or after it. */
+  /** The pointer is over space s: which half says before or after it (after, under a sibling). */
   overSpace(s, e, cx) {
     this.dragMove(e, cx);
-    const d = this.drag;
-    if (!d?.moved) return;
-    const side = this.sibling(s) ? this.sideOf(e) : null;
-    const over = side ? { id: s.id, side } : null;
-    if (over?.id === d.over?.id && over?.side === d.over?.side) return;
-    d.over = over;
-    cx.notify();
+    if (!this.drag?.moved) return;
+    const t = this.landingFor(s);
+    const side = t ? (t.under ? "after" : this.sideOf(e)) : null;
+    this.setOver(side ? { id: t.id, side } : null, cx);
+  }
+
+  /** The pointer is in the panel of s's child spaces, between rows: after s's group, when s is
+   *  (or sits under) a sibling. Otherwise the bar stays where it was. */
+  overGroup(s, e, cx) {
+    this.dragMove(e, cx);
+    if (!this.drag?.moved) return;
+    const t = this.landingFor(s);
+    if (t) this.setOver({ id: t.id, side: "after" }, cx);
   }
 
   overNothing(e, cx) {
@@ -169,8 +206,19 @@ export default class Desktop {
     }
     cx.stop_propagation();
     d.moved = true;
-    const side = this.sibling(s) ? this.sideOf(e) ?? (d.over?.id === s.id ? d.over.side : null) : null;
-    d.over = side ? { id: s.id, side } : null;
+    const t = this.landingFor(s);
+    const side = t ? (t.under ? "after" : this.sideOf(e) ?? (d.over?.id === t.id ? d.over.side : null)) : null;
+    d.over = side ? { id: t.id, side } : null;
+    this.drop(cx);
+  }
+
+  /** The release in s's panel of child spaces, between rows: like overGroup. */
+  upGroup(s, cx) {
+    const d = this.drag;
+    if (!d?.moved) return;
+    cx.stop_propagation();
+    const t = this.landingFor(s);
+    if (t) d.over = { id: t.id, side: "after" };
     this.drop(cx);
   }
 
@@ -180,7 +228,7 @@ export default class Desktop {
     if (!d) return;
     if (d.moved) {
       this.dragEndAt = Date.now();
-      const index = d.over ? dropPosition(spaces().map((x) => x.id), d.id, [d.over.id], d.over.side) : null;
+      const index = this.moves(d.over) ? dropPosition(spaces().map((x) => x.id), d.id, [d.over.id], d.over.side) : null;
       if (index) run("space.move", { id: d.id, index });
     }
     cx.notify();
@@ -193,21 +241,41 @@ export default class Desktop {
     cx.notify();
   }
 
-  /** Where the landing bar goes on space s, if the dragged space would move there. */
-  markFor(s) {
+  /** Where the landing bar goes: { on, side, group }. Before the target, or after it; after a
+   *  target with child spaces showing means after its last one (a root: below its whole panel). */
+  landing(rows) {
     const d = this.drag;
-    if (!d?.moved || d.over?.id !== s.id) return null;
-    return dropPosition(spaces().map((x) => x.id), d.id, [s.id], d.over.side) ? d.over.side : null;
+    if (!d?.moved || !this.moves(d.over)) return null;
+    const i = rows.findIndex((r) => r.id === d.over.id);
+    if (i < 0) return null;
+    const t = rows[i];
+    if (d.over.side === "before") return { on: t.id, side: "before" };
+    let j = i;
+    while (rows[j + 1] && rows[j + 1].nesting.depth > t.nesting.depth) j++;
+    if (j === i) return { on: t.id, side: "after" };
+    return t.nesting.depth === 0 ? { on: t.id, side: "after", group: true } : { on: rows[j].id, side: "after" };
+  }
+
+  /** The dragged space and the child spaces showing under it, drawn faded. */
+  fading(rows) {
+    const d = this.drag;
+    const out = new Set();
+    if (!d?.moved) return out;
+    const i = rows.findIndex((r) => r.id === d.id);
+    if (i < 0) return out;
+    out.add(d.id);
+    for (let j = i + 1; rows[j] && rows[j].nesting.depth > rows[i].nesting.depth; j++) out.add(rows[j].id);
+    return out;
   }
 
   /** The drag hooks a space's folder or row passes to icon() / childRow(). */
-  dragHooks(s) {
+  dragHooks(s, mark, faded) {
     return {
       onDown: (e) => this.press(s, e),
       onMove: (e, cx) => this.overSpace(s, e, cx),
       onUp: (e, cx) => this.upOn(s, e, cx),
-      mark: this.markFor(s),
-      dragging: Boolean(this.drag?.moved && this.drag.id === s.id),
+      mark,
+      dragging: faded,
     };
   }
 
@@ -247,11 +315,11 @@ export default class Desktop {
   }
 
   /** A child space under its parent's folder: indented by depth, a small folder and its name. */
-  childRow(P, s, boxes) {
+  childRow(P, s, boxes, mark, faded) {
     const key = `s-${s.id}`;
     const on = this.sel === key || (this.sel === null && s.active);
     const depth = s.nesting.depth;
-    const drag = this.dragHooks(s);
+    const drag = this.dragHooks(s, mark, faded);
     return h_flex()
       .id(`desk-${key}`)
       .relative()
@@ -301,35 +369,50 @@ export default class Desktop {
   /** Root spaces as desktop folders; an expanded one's descendants in a panel right under it. */
   spaceItems(P, rows) {
     const out = [];
+    const land = this.landing(rows);
+    const fade = this.fading(rows);
+    const markOf = (s) => (land && !land.group && land.on === s.id ? land.side : null);
     for (let i = 0; i < rows.length; i++) {
       const s = rows[i];
-      out.push(
-        this.icon(P, `s-${s.id}`, s.active ? "folder-open" : "folder", s.name, {
-          selected: this.sel === `s-${s.id}` || (this.sel === null && s.active),
-          box: s.nesting.childCount ? this.treeBox(s) : null,
-          open: () => run("space.select", { id: s.id }),
-          menu: () => this.spaceMenu(s),
-          ...this.dragHooks(s),
-        }),
-      );
+      const folder = this.icon(P, `s-${s.id}`, s.active ? "folder-open" : "folder", s.name, {
+        selected: this.sel === `s-${s.id}` || (this.sel === null && s.active),
+        box: s.nesting.childCount ? this.treeBox(s) : null,
+        open: () => run("space.select", { id: s.id }),
+        menu: () => this.spaceMenu(s),
+        ...this.dragHooks(s, markOf(s), false),
+      });
       const kids = [];
       while (rows[i + 1]?.nesting.depth > 0) kids.push(rows[++i]);
-      if (kids.length) {
-        out.push(
-          v_flex()
-            .id(`desk-kids-${s.id}`)
-            .flex_none()
-            .w(92)
-            .mt(-2)
-            .p(2)
-            .gap(1)
-            .rounded(4)
-            .bg("#0000002e")
-            .border_1()
-            .border_color("#ffffff33")
-            .children(kids.map((k) => this.childRow(P, k, kids.some((x) => x.nesting.childCount > 0)))),
-        );
-      }
+      // A root and the panel of its child spaces move as one group, so the bar can go below both.
+      out.push(
+        v_flex()
+          .id(`desk-group-${s.id}`)
+          .relative()
+          .flex_none()
+          .items_center()
+          .gap(4)
+          .when(fade.has(s.id), (el) => el.opacity(0.5))
+          .when(Boolean(land?.group && land.on === s.id), (el) => el.child(this.bar("after", 6, -4)))
+          .child(folder)
+          .when(kids.length > 0, (el) =>
+            el.child(
+              v_flex()
+                .id(`desk-kids-${s.id}`)
+                .flex_none()
+                .w(92)
+                .mt(-2)
+                .p(2)
+                .gap(1)
+                .rounded(4)
+                .bg("#0000002e")
+                .border_1()
+                .border_color("#ffffff33")
+                .on_mouse_move((e, cx) => this.overGroup(s, e, cx))
+                .on_mouse_up("left", (_e, cx) => this.upGroup(s, cx))
+                .children(kids.map((k) => this.childRow(P, k, kids.some((x) => x.nesting.childCount > 0), markOf(k), fade.has(k.id) && !fade.has(s.id)))),
+            ),
+          ),
+      );
     }
     return out;
   }
@@ -355,6 +438,8 @@ export default class Desktop {
     this.syncWallpaper(cx);
     const P = pal();
     const rows = primaryRows();
+    this.rows = rows;
+    this.tree = new Map(rows.map((r) => [r.id, { parent: r.nesting.parentId ?? null, machine: r.machine ?? null }]));
     return v_flex()
       .id("xp-desktop")
       .size_full()

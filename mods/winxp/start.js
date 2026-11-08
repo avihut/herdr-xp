@@ -5,7 +5,7 @@
 // switcher); Help and Support, Search, Run. Bottom: Log Off, Turn Off.
 
 import { spaces, panes, props, closeOverlay, knownAgents, setShared, shared } from "herdr";
-import { div, h_flex, v_flex, pal, bands, grad, pic, iconOf, glyph, shadowed, uiFont, titleFont, userName, tildePath, paneTitle, perform, openMenu, closeMenuTree, layoutItems, fadeLine } from "./kit.js";
+import { div, h_flex, v_flex, pal, bands, grad, pic, iconOf, glyph, shadowed, uiFont, titleFont, userName, tildePath, paneTitle, perform, openMenu, closeMenuTree, layoutItems, fadeLine, hasSim } from "./kit.js";
 
 export const MENU_W = 380;
 export const MENU_H = 448;
@@ -29,6 +29,7 @@ export function programsMenu(agents) {
       { label: "Command Palette", icon: "search", act: { run: ["app.palette", {}] } },
       { label: "Folders", icon: "folders", act: { panel: "files" } },
       { label: "Changes", icon: "changes", act: { panel: "changes" } },
+      ...(hasSim() ? [{ label: "Simulator", icon: "phone", act: { panel: "herdr-sim" } }] : []),
       { label: "Tour Herdr XP", icon: "tour", act: { shared: ["winxp.balloon", { kind: "tour", at: Date.now() }] } },
     ] },
     { label: "Agents", icon: "programs", sub: agentItems.length ? agentItems : [{ label: "(Empty)", disabled: true }] },

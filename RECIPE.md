@@ -64,6 +64,7 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
   - `folders`: the focused window's folder as XP's Explorer tree, 18 px rows, 19 px per level, gray guide lines with elbows, [+]/[-] boxes, 16 px folder and `doc` icons, Tahoma 11; a click selects (XP blue), a folder opens, a file opens a read-only preview with a Back button and an address field; Git marks A/M/D/U after names.
   - `changes`: a summary strip ("7 files changed", +N −M), Details view headers (Name, In Folder, Changes) on XP's header gradient, rows with a colored status badge (A green, M orange, D/U red), the picked file's diff (line numbers, green and red rows, hunk headers on the face color), and a commit box (XP text field and button: `git add -A` then `git commit -m`).
   - `repo.js` reads the folder and Git for both, layout-neutral; both follow the focused pane and refresh on `watchFolder` and every 10 s. `watch.js` keeps that to one watch loop per bar and folder, and watches only folders inside a Git repository, never home or above. A closed bar sleeps until it shows again. `mise run test` covers both.
+  - A third child, `herdr-sim`, is Herdr Sim's own mod (`{ mod: "herdr-sim", props: { frames: "panel" } }`), as in the Herdr Sim layout. `hasSim()` (`kit.js`) checks `mods/herdr-sim/mod.json` once per copy, so the Simulator tab, Quick Launch's phone (`img/phone.svg`), Accessories ▸ Simulator and ⌘⇧S (`winxp.simulator`, from the repo's `keys.json`) appear only when the mod is installed.
   - Quick Launch's Folders and Changes icons, and Accessories ▸ Folders and Changes, toggle it (`togglePanel` in `kit.js`: `layout.select` the stack's child, `layout.show`/`layout.hide` the panel, read back from `layout()`, plus a `winxp.panel` shared write so every copy re-renders); a Quick Launch icon looks pressed while its bar shows.
 - **Wallpaper.** When the theme turns dark or light, the desktop role runs `layout.set` with the other wallpaper. Herdr caches a background by path, so rewriting the file isn't enough.
 - **Welcome screen** (Log Off ▸ Log Off or Switch User). Every layout is a user, the shown one marked. Clicking another switches to it; clicking the shown one logs back on with the startup chime.
@@ -76,7 +77,7 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
   - `layouts/winxp.json`.
   - `themes/winxp.json` (light) and `themes/winxp-dark.json`. Both have black terminals with the 16 console colors; they differ in their panel colors.
   - `mods/winxp`, one mod with roles.
-  - `keys.json`: `"layout:winxp": {"ctrl-escape": "winxp.start"}`.
+  - `keys.json`: `"layout:winxp": {"ctrl-escape": "winxp.start", "cmd-shift-s": "winxp.simulator"}`.
 - **Layout tree.**
   - A root column with the theme pair, the wallpaper, `ui_font` Tahoma, the VGA terminal font, `titlebar: "none"` and `traffic_lights`.
   - A row containing `desktop`, a 96 px block with `window_drag`, and `main`, the `{ "tab": "active" }` block whose pane header is the `window` role. `main` has `"movable": false`, which hides Herdr's pane grip; the title bars move windows instead.

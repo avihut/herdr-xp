@@ -1,14 +1,15 @@
-// The Explorer bar's header (the panelbar role): Herdr's Files and Changes mods sit docked on
-// the right in the layout's "panel" column, and this strip on top names them in the Explorer
-// task pane's look. Click Folders or Changes to switch, × to close. Quick Launch and
-// Accessories open it too (togglePanel in kit.js).
+// The Explorer bar's header (the panelbar role): the Folders and Changes bars, and Herdr Sim's
+// simulator when its herdr-sim mod is installed, sit docked on the right in the layout's "panel"
+// column, and this strip on top names them in the Explorer task pane's look. Click one to
+// switch, × to close. Quick Launch and Accessories open it too (togglePanel in kit.js).
 
 import { run } from "herdr";
-import { div, h_flex, pal, grad, pic, uiFont, panelShown, togglePanel } from "./kit.js";
+import { div, h_flex, pal, grad, pic, uiFont, panelShown, togglePanel, hasSim } from "./kit.js";
 
 const BARS = [
   ["files", "folders", "Folders"],
   ["changes", "changes", "Changes"],
+  ["herdr-sim", "phone", "Simulator"],
 ];
 
 export default class PanelBar {
@@ -51,7 +52,7 @@ export default class PanelBar {
           .px(4)
           .gap(2)
           .items_center()
-          .children(BARS.map((b) => this.tab(P, b, b[0] === shown)))
+          .children(BARS.filter((b) => b[0] !== "herdr-sim" || hasSim()).map((b) => this.tab(P, b, b[0] === shown)))
           .child(div().flex_1())
           .child(
             div()

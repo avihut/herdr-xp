@@ -8,7 +8,7 @@ import { renamedPane, openPaneRename } from "./pane-rename.js";
 
 import { div, svg, image, PathBuilder, Background } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { theme, fonts, home, run, openOverlay, closeOverlay, setShared, shared, layouts, layout, settings, playSound, panes } from "herdr";
+import { theme, fonts, home, run, openOverlay, closeOverlay, setShared, shared, layouts, layout, settings, playSound, panes, readTextFile, appHome } from "herdr";
 
 export const ASSETS = "mods/winxp/img";
 
@@ -374,6 +374,23 @@ export function panelShown() {
   const panel = findNode(root, "panel");
   if (!panel || panel.hidden) return null;
   return findNode(root, "panel-body")?.active ?? null;
+}
+
+/** Is Herdr Sim's simulator (the herdr-sim mod) installed? The Simulator bar shows it, so its
+ *  buttons and menu rows appear only then. Checked once per copy; the answer re-renders all. */
+let sim = null;
+export function hasSim() {
+  if (sim === null) {
+    sim = shared("winxp.sim") === true;
+    readTextFile(`${appHome()}/mods/herdr-sim/mod.json`)
+      .then((text) => text !== null)
+      .catch(() => false)
+      .then((yes) => {
+        sim = yes;
+        if (shared("winxp.sim") !== yes) setShared("winxp.sim", yes);
+      });
+  }
+  return sim;
 }
 
 /** Shows that bar, or hides it when it is the one showing. */

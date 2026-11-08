@@ -1,5 +1,6 @@
 {
   "layout:winxp": {
-    "ctrl-escape": "winxp.start"
+    "ctrl-escape": "winxp.start",
+    "cmd-shift-s": "winxp.simulator"
   }
 }

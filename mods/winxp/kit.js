@@ -379,9 +379,14 @@ export function panelShown() {
 /** Shows that bar, or hides it when it is the one showing. */
 export function togglePanel(which) {
   if (!findNode(layout(), "panel")) return;
-  if (panelShown() === which) return run("layout.hide", { id: "panel" });
-  run("layout.select", { stack: "panel-body", child: which });
-  run("layout.show", { id: "panel" });
+  if (panelShown() === which) run("layout.hide", { id: "panel" });
+  else {
+    run("layout.select", { stack: "panel-body", child: which });
+    run("layout.show", { id: "panel" });
+  }
+  // A shared write re-renders every copy (the taskbar's lit icon, the bar's header); the state itself
+  // is still read from layout().
+  setShared("winxp.panel", { at: Date.now() });
 }
 
 /** Does what a menu row or button names: { run: [cmd, args] } | { runs: [[cmd, args], ...] } | { open: role } | { dialog: kind } | { shared: [k, v] } | { panel: "files" | "changes" } | { browser: true | url } | { boot } */

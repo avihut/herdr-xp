@@ -112,14 +112,20 @@
                   "id": "files",
                   "type": "block",
                   "content": {
-                    "mod": "files"
+                    "mod": "winxp",
+                    "props": {
+                      "role": "folders"
+                    }
                   }
                 },
                 {
                   "id": "changes",
                   "type": "block",
                   "content": {
-                    "mod": "changes"
+                    "mod": "winxp",
+                    "props": {
+                      "role": "changes"
+                    }
                   }
                 }
               ]

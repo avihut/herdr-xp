@@ -41,106 +41,114 @@
           }
         },
         {
-          "id": "main",
-          "type": "block",
-          "movable": false,
-          "padding": [
-            14,
-            14
-          ],
-          "content": {
-            "tab": "active",
-            "pane": {
-              "header": {
-                "content": {
-                  "mod": "winxp",
-                  "props": {
-                    "role": "window"
-                  }
-                },
-                "height": 30,
-                "position": "top",
-                "reveal": "always"
-              },
-              "background": "background",
-              "border": {
-                "width": 3,
-                "color": "border"
-              },
-              "focus": {
-                "width": 3,
-                "color": "accent"
-              },
-              "radius": 7,
-              "gap": 10,
-              "lone": true
-            }
-          }
-        },
-        {
-          "id": "panel",
-          "type": "column",
-          "hidden": true,
-          "size": {
-            "px": 380
-          },
-          "background": "surface",
-          "border": {
-            "width": 1,
-            "color": "border"
-          },
+          "id": "work",
+          "type": "row",
           "children": [
             {
-              "id": "panel-head",
+              "id": "main",
               "type": "block",
-              "size": {
-                "px": 28
-              },
+              "movable": false,
+              "padding": [
+                14,
+                14
+              ],
               "content": {
-                "mod": "winxp",
-                "props": {
-                  "role": "panelbar"
+                "tab": "active",
+                "pane": {
+                  "header": {
+                    "content": {
+                      "mod": "winxp",
+                      "props": {
+                        "role": "window"
+                      }
+                    },
+                    "height": 30,
+                    "position": "top",
+                    "reveal": "always"
+                  },
+                  "background": "background",
+                  "border": {
+                    "width": 3,
+                    "color": "border"
+                  },
+                  "focus": {
+                    "width": 3,
+                    "color": "accent"
+                  },
+                  "radius": 7,
+                  "gap": 10,
+                  "lone": true
                 }
               }
             },
             {
-              "id": "panel-body",
-              "type": "stack",
-              "active": "files",
+              "id": "panel",
+              "type": "column",
+              "hidden": true,
+              "size": {
+                "px": 380
+              },
+              "background": "surface",
+              "border": {
+                "width": 1,
+                "color": "border"
+              },
               "children": [
                 {
-                  "id": "files",
+                  "id": "panel-head",
                   "type": "block",
+                  "size": {
+                    "px": 28
+                  },
                   "content": {
                     "mod": "winxp",
                     "props": {
-                      "role": "folders",
-                      "bar": true
+                      "role": "panelbar"
                     }
                   }
                 },
                 {
-                  "id": "changes",
-                  "type": "block",
-                  "content": {
-                    "mod": "winxp",
-                    "props": {
-                      "role": "changes",
-                      "bar": true
+                  "id": "panel-body",
+                  "type": "stack",
+                  "active": "files",
+                  "children": [
+                    {
+                      "id": "files",
+                      "type": "block",
+                      "content": {
+                        "mod": "winxp",
+                        "props": {
+                          "role": "folders",
+                          "bar": true
+                        }
+                      }
+                    },
+                    {
+                      "id": "changes",
+                      "type": "block",
+                      "content": {
+                        "mod": "winxp",
+                        "props": {
+                          "role": "changes",
+                          "bar": true
+                        }
+                      }
+                    },
+                    {
+                      "id": "herdr-sim",
+                      "type": "block",
+                      "content": {
+                        "mod": "herdr-sim",
+                        "props": {
+                          "frames": "panel"
+                        }
+                      }
                     }
-                  }
-                },
-                {
-                  "id": "herdr-sim",
-                  "type": "block",
-                  "content": {
-                    "mod": "herdr-sim",
-                    "props": {
-                      "frames": "panel"
-                    }
-                  }
+                  ]
                 }
-              ]
+              ],
+              "min": 280,
+              "max": 900
             }
           ]
         }

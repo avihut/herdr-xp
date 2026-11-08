@@ -20,7 +20,7 @@ import { run, layout, shared, spaces } from "herdr";
 import { div, h_flex, v_flex, pal, pic, isDark, uiFont, openMenu, openWindow, openDialog } from "./kit.js";
 import { GAMES } from "./explorer.js";
 import { primaryRows, toggleSpaceChildren } from "./workspace-tree.js";
-import { dropPosition } from "./taborder.js";
+import { dropPosition, siblingMove } from "./taborder.js";
 
 const SLOP = 4; // px a press moves before it is a drag, not a click
 const WALL = (k) => `mods/winxp/img/wallpaper-${k}.svg`;
@@ -146,15 +146,12 @@ export default class Desktop {
     return null;
   }
 
-  /** Would the drop move the space among its siblings at all? */
-  moves(over) {
-    const d = this.drag;
+  /** Would drag d's drop on over move the space among its siblings at all? Takes d, since drop()
+   *  has already cleared this.drag (reading this.drag here made every drop a no-op). */
+  moves(d, over) {
     if (!d || !over) return false;
     const sibs = (this.rows ?? []).filter((r) => (r.nesting.parentId ?? null) === d.parent && (r.machine ?? null) === d.machine).map((r) => r.id);
-    const a = sibs.indexOf(d.id);
-    const t = sibs.indexOf(over.id);
-    if (a < 0 || t < 0 || a === t) return false;
-    return over.side === "before" ? a !== t - 1 : a !== t + 1;
+    return siblingMove(sibs, d.id, over.id, over.side);
   }
 
   setOver(over, cx) {
@@ -228,7 +225,7 @@ export default class Desktop {
     if (!d) return;
     if (d.moved) {
       this.dragEndAt = Date.now();
-      const index = this.moves(d.over) ? dropPosition(spaces().map((x) => x.id), d.id, [d.over.id], d.over.side) : null;
+      const index = this.moves(d, d.over) ? dropPosition(spaces().map((x) => x.id), d.id, [d.over.id], d.over.side) : null;
       if (index) run("space.move", { id: d.id, index });
     }
     cx.notify();
@@ -245,7 +242,7 @@ export default class Desktop {
    *  target with child spaces showing means after its last one (a root: below its whole panel). */
   landing(rows) {
     const d = this.drag;
-    if (!d?.moved || !this.moves(d.over)) return null;
+    if (!d?.moved || !this.moves(d, d.over)) return null;
     const i = rows.findIndex((r) => r.id === d.over.id);
     if (i < 0) return null;
     const t = rows[i];

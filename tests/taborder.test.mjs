@@ -3,7 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { dropPosition } from "../mods/winxp/taborder.js";
+import { dropPosition, siblingMove } from "../mods/winxp/taborder.js";
 
 const order = ["a", "b", "c", "d", "e"];
 
@@ -42,4 +42,15 @@ test("sibling spaces with another parent's children between them keep their orde
   assert.deepEqual(roots(move(spaces, "r3", i)), ["r1", "r3", "r2"]);
   const j = dropPosition(spaces, "r1", ["r3"], "after");
   assert.deepEqual(roots(move(spaces, "r1", j)), ["r2", "r3", "r1"]);
+});
+
+test("a drop moves a space among its siblings unless it would land where it is", () => {
+  const sibs = ["r1", "r2", "r3"];
+  assert.equal(siblingMove(sibs, "r3", "r1", "after"), true);
+  assert.equal(siblingMove(sibs, "r1", "r3", "after"), true);
+  assert.equal(siblingMove(sibs, "r1", "r3", "before"), true);
+  assert.equal(siblingMove(sibs, "r1", "r2", "before"), false, "already right before it");
+  assert.equal(siblingMove(sibs, "r2", "r1", "after"), false, "already right after it");
+  assert.equal(siblingMove(sibs, "r2", "r2", "after"), false, "onto itself");
+  assert.equal(siblingMove(sibs, "k1", "r2", "after"), false, "not a sibling");
 });

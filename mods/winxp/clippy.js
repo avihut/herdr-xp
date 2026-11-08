@@ -16,7 +16,8 @@
 //   shared winxp.clippy.dismissed  "<agent address>:<status>" balloons answered or put off
 //   shared winxp.clippy.closed     { key, at }: a balloon closed itself (a choice in it)
 //   shared winxp.clippy.quiet      agent balloons that closed themselves unread: the light bulb
-//   shared winxp.clippy.recall     the one a click on the paperclip brought back
+//   shared winxp.clippy.recall     what a click on the paperclip brought back: one message's key,
+//                                  or "list" for the sheet of them all
 
 import { image } from "gpui-kit";
 import { agents, shared, setShared, props, closeOverlay, openOverlay } from "herdr";
@@ -48,6 +49,11 @@ const dismissed = () => shared("winxp.clippy.dismissed") ?? [];
 const quieted = () => shared("winxp.clippy.quiet") ?? [];
 const keyOf = (a) => `${a.address}:${a.status}`;
 const AUTO_CLOSE = 5000; // an agent's balloon closes itself after this, unless pointed at
+const SHEET_ROW = 34;
+const SHEET_ROWS = 5; // rows the sheet shows before it scrolls
+const SHEET_W = 270;
+const where = (a) => `${a.space_name} \\ ${a.tab_name}`;
+const nameOf = (a) => a.program?.name ?? a.app ?? "Your agent";
 
 // Its quirks, played natively: no JavaScript timer redraws anything. A five-minute script (built
 // once, from a fixed seed) says, for each 120 ms tick, which eye drawing shows (img/clippy-*.svg
@@ -139,7 +145,25 @@ export class Assistant {
     const list = this.items();
     const quiet = new Set(quieted());
     const recall = shared("winxp.clippy.recall");
-    const called = recall ? list.find((x) => keyOf(x) === recall) : null;
+    if (recall === "list") {
+      const waiting = this.pending().reverse(); // the most pressing first
+      if (waiting.length > 1) {
+        const keys = waiting.map(keyOf);
+        const answer = (k) => [["winxp.clippy.dismissed", [...dismissed(), ...k]], ["winxp.clippy.recall", null]];
+        return {
+          key: `list:${keys.join(",")}`,
+          text: `You have ${waiting.length} messages from your agents.`,
+          sheet: waiting.map((a) => ({
+            name: nameOf(a),
+            where: where(a),
+            status: a.status,
+            act: { run: ["agent.focus", { terminal: a.address }], shareds: answer([keyOf(a)]) },
+          })),
+          actions: [["Dismiss all", { shareds: answer(keys) }], ["Close", { shared: ["winxp.clippy.recall", null] }]],
+        };
+      }
+    }
+    const called = recall && recall !== "list" ? list.find((x) => keyOf(x) === recall) : null;
     const a = called ?? list.filter((x) => !quiet.has(keyOf(x))).pop();
     if (a) {
       const key = keyOf(a);
@@ -181,7 +205,8 @@ export class Assistant {
     const live = new Set(this.items().map(keyOf));
     const stillQuiet = quieted().filter((k) => live.has(k));
     if (stillQuiet.length !== quieted().length) setShared("winxp.clippy.quiet", stillQuiet);
-    if (shared("winxp.clippy.recall") && !live.has(shared("winxp.clippy.recall"))) setShared("winxp.clippy.recall", null);
+    const recall = shared("winxp.clippy.recall");
+    if (recall === "list" ? this.pending().length < 2 : recall && !live.has(recall)) setShared("winxp.clippy.recall", null);
     if (!this.shown() && shared("winxp.clippy.tip") != null) setShared("winxp.clippy.tip", null);
     const want = this.want();
     const closed = shared("winxp.clippy.closed");
@@ -193,17 +218,18 @@ export class Assistant {
     this.balloon = null;
     if (!want) return setShared("winxp.clippy.balloonId", null);
     const lines = want.text.split("\n").reduce((n, l) => n + Math.max(1, Math.ceil(l.length / CHARS)), 0);
-    const h = 2 + 18 + lines * LINE + 8 + want.actions.length * 16 + (want.actions.length - 1) * 4 + 12 + 6;
+    const sheet = want.sheet ? Math.min(want.sheet.length, SHEET_ROWS) * SHEET_ROW + 2 + 8 : 0;
+    const h = 2 + 18 + lines * LINE + 8 + sheet + want.actions.length * 16 + (want.actions.length - 1) * 4 + 12 + 6;
     const z = zoom();
     const win = windowSize();
     const id = openOverlay({
       mod: "winxp",
       kind: "window",
       frame: "none",
-      width: BALLOON_W * z,
+      width: (want.sheet ? SHEET_W : BALLOON_W) * z,
       height: h * z,
       at: { x: (LEFT - 6) * z, y: Math.max(0, win.height - (TASKBAR + BOTTOM + CLIP_H + h - 4) * z) },
-      props: { role: "clippy", key: want.key, agent: want.agent ?? null, auto: Boolean(want.auto), text: want.text, actions: want.actions },
+      props: { role: "clippy", key: want.key, agent: want.agent ?? null, auto: Boolean(want.auto), text: want.text, sheet: want.sheet ?? null, actions: want.actions },
     });
     this.balloon = { key: want.key, id, at: Date.now() };
     setShared("winxp.clippy.balloonId", id);
@@ -237,7 +263,29 @@ export class Assistant {
       .child(img("clippy"))
       .when(lively, (el) => el.children(LAYERS.map(layer)))
       // Office's light bulb: it has something to say (balloons that closed unread).
-      .when(waiting > 0, (el) => el.child(image("mods/winxp/img/clippy-bulb.svg").absolute().top(-8).right(-6).w(22).h(22)));
+      .when(waiting > 0, (el) => el.child(image("mods/winxp/img/clippy-bulb.svg").absolute().top(-8).right(-6).w(22).h(22)))
+      .when(waiting > 1, (el) =>
+        el.child(
+          div()
+            .absolute()
+            .top(-10)
+            .right(-12)
+            .min_w(14)
+            .h(14)
+            .px(3)
+            .rounded(7)
+            .bg("#d8261a")
+            .border_1()
+            .border_color("#ffffff")
+            .flex()
+            .items_center()
+            .justify_center()
+            .text_size(9)
+            .font_weight(700)
+            .text_color("#ffffff")
+            .child(String(waiting)),
+        ),
+      );
     return own(
       v_flex()
         .id("clippy")
@@ -254,7 +302,7 @@ export class Assistant {
           if (recall) setShared("winxp.clippy.recall", null);
           else if (waiting.length) {
             setShared("winxp.clippy.tip", null);
-            setShared("winxp.clippy.recall", keyOf(waiting[waiting.length - 1]));
+            setShared("winxp.clippy.recall", waiting.length > 1 ? "list" : keyOf(waiting[0]));
           } else {
             const tip = shared("winxp.clippy.tip");
             setShared("winxp.clippy.tip", tip == null ? Math.floor(Math.random() * this.tips().length) : null);
@@ -297,6 +345,46 @@ export default class ClippyBalloon {
     setShared("winxp.clippy.closed", { key: props()?.key, at: Date.now() });
   }
 
+  /** The messages as a list in a sunken white field (XP's list box): who, where, and whether it
+   *  waits for you or finished. It shows SHEET_ROWS rows, then scrolls. A row takes you there. */
+  sheet(P, p) {
+    const rows = p.sheet;
+    return v_flex()
+      .id("clippy-sheet")
+      .flex_none()
+      .h(Math.min(rows.length, SHEET_ROWS) * SHEET_ROW + 2)
+      .border_1()
+      .border_color(P.fieldBorder)
+      .bg(P.field)
+      .overflow_y_scroll()
+      .children(
+        rows.map((r, i) =>
+          h_flex()
+            .id(`clip-row-${i}`)
+            .flex_none()
+            .h(SHEET_ROW)
+            .px(6)
+            .gap(6)
+            .items_center()
+            .cursor_pointer()
+            .text_color(P.dark ? P.faceText : "#000000")
+            .hover((s) => s.bg(P.menuHover).text_color(P.menuHoverText))
+            .on_click(() => {
+              perform(r.act);
+              closeOverlay(p.overlay);
+            })
+            .child(pic(r.status === "blocked" ? "warning" : "info", 16))
+            .child(
+              v_flex()
+                .flex_1()
+                .min_w(0)
+                .child(div().truncate().font_weight(700).child(r.name))
+                .child(div().truncate().text_size(10).opacity(0.8).child(`${r.status === "blocked" ? "Waiting for you" : "Finished"} · ${r.where}`)),
+            ),
+        ),
+      );
+  }
+
   render(_cx) {
     const P = pal();
     const p = props() ?? {};
@@ -322,6 +410,7 @@ export default class ClippyBalloon {
             .text_size(11)
             .text_color(P.dark ? P.faceText : "#000000")
             .child(v_flex().children(String(p.text ?? "").split("\n").map((l) => div().line_height(`${LINE}px`).child(l || " "))))
+            .when(Boolean(p.sheet?.length), (el) => el.child(this.sheet(P, p)))
             .child(
               v_flex()
                 .gap(4)

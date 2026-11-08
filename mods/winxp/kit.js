@@ -405,7 +405,7 @@ export function togglePanel(which) {
   setShared("winxp.panel", { at: Date.now() });
 }
 
-/** Does what a menu row or button names: { run: [cmd, args] } | { runs: [[cmd, args], ...] } | { open: role } | { dialog: kind } | { shared: [k, v] } | { panel: "files" | "changes" } | { browser: true | url } | { boot } */
+/** Does what a menu row or button names: { run: [cmd, args] } | { runs: [[cmd, args], ...] } | { open: role } | { dialog: kind } | { shared: [k, v] } | { shareds: [[k, v], ...] } | { panel: "files" | "changes" } | { browser: true | url } | { boot } */
 export function perform(act) {
   if (act?.renamePane) { openPaneRename(act.renamePane); return; }
   if (!act) return;
@@ -414,6 +414,7 @@ export function perform(act) {
   if (act.open) openWindow(act.open, act.props ?? {});
   if (act.dialog) openDialog(act.dialog, act.props ?? {});
   if (act.shared) setShared(act.shared[0], act.shared[1]);
+  if (act.shareds) for (const [k, v] of act.shareds) setShared(k, v);
   if (act.panel) togglePanel(act.panel);
   if (act.browser) openBrowser(typeof act.browser === "string" ? act.browser : undefined);
 }

@@ -27,6 +27,8 @@ export function programsMenu(agents) {
       ] },
       { label: "Command Prompt", icon: "cmd", act: { run: ["tab.new", {}] } },
       { label: "Command Palette", icon: "search", act: { run: ["app.palette", {}] } },
+      { label: "Folders", icon: "folders", act: { panel: "files" } },
+      { label: "Changes", icon: "changes", act: { panel: "changes" } },
       { label: "Tour Herdr XP", icon: "tour", act: { shared: ["winxp.balloon", { kind: "tour", at: Date.now() }] } },
     ] },
     { label: "Agents", icon: "programs", sub: agentItems.length ? agentItems : [{ label: "(Empty)", disabled: true }] },

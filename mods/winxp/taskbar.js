@@ -9,7 +9,7 @@
 // boot screen, and XP's balloon tips.
 
 import { spaces, panes, agents, run, shared, setShared, nextCommand, knownAgents, openOverlay, closeOverlay, settings } from "herdr";
-import { div, h_flex, pal, bands, grad, pic, glyph, programIcon, shadowed, own, uiFont, paneTitle, statusColor, openMenu, openDialog, openWindow } from "./kit.js";
+import { div, h_flex, pal, bands, grad, pic, glyph, programIcon, shadowed, own, uiFont, paneTitle, statusColor, openMenu, openDialog, openWindow, panelShown, togglePanel } from "./kit.js";
 import { MENU_W, MENU_H } from "./start.js";
 import { watchPlacement } from "./panedrag.js";
 import { watchBattery, batteryTip, batteryReport } from "./battery.js";
@@ -165,12 +165,15 @@ export default class Taskbar {
   }
 
   quickLaunch() {
-    const item = (id, icon, tip, act) =>
-      own(div().id(id).flex_none().w(24).h(24).rounded(3).flex().items_center().justify_center().tooltip(tip).hover((s) => s.bg("#ffffff33")).child(icon).on_click(() => act()));
+    const item = (id, icon, tip, act, on = false) =>
+      own(div().id(id).flex_none().w(24).h(24).rounded(3).flex().items_center().justify_center().tooltip(tip).when(on, (el) => el.bg("#00000038").border_1().border_color("#ffffff40")).hover((s) => s.bg("#ffffff33")).child(icon).on_click(() => act()));
     const shown = spaces().find((s) => s.active);
+    const bar = panelShown();
     const items = [
       item("ql-desktop", pic("show-desktop", 18), "Show Desktop", () => (shown?.tabs ?? []).filter((t) => !t.settled).forEach((t) => run("tab.settle", { id: t.id }))),
       item("ql-cmd", pic("cmd", 18), "Command Prompt", () => run("tab.new", {})),
+      item("ql-files", pic("folders", 18), "Folders", () => togglePanel("files"), bar === "files"),
+      item("ql-changes", pic("changes", 18), "Changes", () => togglePanel("changes"), bar === "changes"),
       ...this.quick.map((a) => item(`ql-${a.key}`, programIcon(a, 18), a.name, () => run("tab.new", { name: a.name, argv: a.run }))),
     ];
     return h_flex()

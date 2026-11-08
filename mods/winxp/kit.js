@@ -8,7 +8,7 @@ import { renamedPane, openPaneRename } from "./pane-rename.js";
 
 import { div, svg, image, PathBuilder, Background } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { theme, fonts, home, run, openOverlay, closeOverlay, setShared, shared, layouts, settings, playSound } from "herdr";
+import { theme, fonts, home, run, openOverlay, closeOverlay, setShared, shared, layouts, layout, settings, playSound } from "herdr";
 
 export const ASSETS = "mods/winxp/img";
 
@@ -335,7 +335,36 @@ export function zoom() {
   return Number(settings()?.zoom) || 1;
 }
 
-/** Does what a menu row or button names: { run: [cmd, args] } | { runs: [[cmd, args], ...] } | { open: role } | { dialog: kind } | { shared: [k, v] } | { boot } */
+// ---- the Explorer bar: Herdr's Files and Changes mods, docked on the right (layout node "panel",
+// its stack "panel-body" with blocks "files" and "changes"; the header is the panelbar role)
+
+function findNode(n, id) {
+  if (!n || typeof n !== "object") return null;
+  if (n.id === id) return n;
+  for (const c of [...(n.children ?? []), ...(n.floating ?? [])]) {
+    const r = findNode(c, id);
+    if (r) return r;
+  }
+  return null;
+}
+
+/** Which bar shows: "files", "changes", or null (hidden, or a layout without one). */
+export function panelShown() {
+  const root = layout();
+  const panel = findNode(root, "panel");
+  if (!panel || panel.hidden) return null;
+  return findNode(root, "panel-body")?.active ?? null;
+}
+
+/** Shows that bar, or hides it when it is the one showing. */
+export function togglePanel(which) {
+  if (!findNode(layout(), "panel")) return;
+  if (panelShown() === which) return run("layout.hide", { id: "panel" });
+  run("layout.select", { stack: "panel-body", child: which });
+  run("layout.show", { id: "panel" });
+}
+
+/** Does what a menu row or button names: { run: [cmd, args] } | { runs: [[cmd, args], ...] } | { open: role } | { dialog: kind } | { shared: [k, v] } | { panel: "files" | "changes" } | { boot } */
 export function perform(act) {
   if (act?.renamePane) { openPaneRename(act.renamePane); return; }
   if (!act) return;
@@ -344,6 +373,7 @@ export function perform(act) {
   if (act.open) openWindow(act.open, act.props ?? {});
   if (act.dialog) openDialog(act.dialog, act.props ?? {});
   if (act.shared) setShared(act.shared[0], act.shared[1]);
+  if (act.panel) togglePanel(act.panel);
 }
 
 const WINDOWS = {

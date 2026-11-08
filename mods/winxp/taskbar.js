@@ -9,7 +9,7 @@
 // boot screen, and XP's balloon tips.
 
 import { spaces, panes, agents, run, shared, setShared, nextCommand, knownAgents, openOverlay, closeOverlay, settings } from "herdr";
-import { div, h_flex, pal, bands, grad, pic, glyph, programIcon, shadowed, own, uiFont, paneTitle, statusColor, openMenu, openDialog, openWindow, panelShown, togglePanel } from "./kit.js";
+import { div, h_flex, pal, bands, grad, pic, glyph, programIcon, shadowed, own, uiFont, paneTitle, statusColor, openMenu, openDialog, openWindow, panelShown, togglePanel, openBrowser } from "./kit.js";
 import { MENU_W, MENU_H } from "./start.js";
 import { watchPlacement } from "./panedrag.js";
 import { watchBattery, batteryTip, batteryReport } from "./battery.js";
@@ -38,6 +38,7 @@ const COMMANDS = {
   spider: () => openWindow("spider"),
   freecell: () => openWindow("freecell"),
   mycomputer: () => openWindow("mycomputer"),
+  internet: () => openBrowser(),
   taskman: () => openWindow("taskman"),
   tour: () => setShared("winxp.balloon", { kind: "tour", at: Date.now() }),
 };
@@ -171,6 +172,7 @@ export default class Taskbar {
     const bar = panelShown();
     const items = [
       item("ql-desktop", pic("show-desktop", 18), "Show Desktop", () => (shown?.tabs ?? []).filter((t) => !t.settled).forEach((t) => run("tab.settle", { id: t.id }))),
+      item("ql-internet", pic("internet", 18), "Internet", () => openBrowser()),
       item("ql-cmd", pic("cmd", 18), "Command Prompt", () => run("tab.new", {})),
       item("ql-files", pic("folders", 18), "Folders", () => togglePanel("files"), bar === "files"),
       item("ql-changes", pic("changes", 18), "Changes", () => togglePanel("changes"), bar === "changes"),

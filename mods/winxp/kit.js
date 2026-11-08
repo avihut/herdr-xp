@@ -8,7 +8,7 @@ import { renamedPane, openPaneRename } from "./pane-rename.js";
 
 import { div, svg, image, PathBuilder, Background } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { theme, fonts, home, run, openOverlay, closeOverlay, setShared, shared, layouts, layout, settings, playSound } from "herdr";
+import { theme, fonts, home, run, openOverlay, closeOverlay, setShared, shared, layouts, layout, settings, playSound, panes } from "herdr";
 
 export const ASSETS = "mods/winxp/img";
 
@@ -224,7 +224,22 @@ export function glyph(name, size, color) {
 
 /** A program's icon from Herdr's program table (`p.program`), or the console's.
  *  One-color glyphs are drawn bare in the program's color, as XP drew icons: no tile behind. */
+/** terminal-browser, a real web browser drawn in a terminal: XP shows it as "Internet". */
+export function isBrowser(program) {
+  return /terminal-browser/i.test(`${program?.key ?? ""} ${program?.name ?? ""} ${program?.command ?? ""}`);
+}
+
+/** Opens the browser: beside the focused window, or in a tab of its own when the shown tab is
+ *  already crowded (four windows or more). url: a page, or the browser's own start page. */
+export function openBrowser(url) {
+  const argv = ["terminal-browser", ...(url ? [url] : [])];
+  const shown = panes().filter((p) => p.tab === panes().find((x) => x.focused)?.tab);
+  if (shown.length >= 4) run("tab.new", { name: "Internet", argv });
+  else run("pane.split", { direction: "right", argv });
+}
+
 export function programIcon(program, size, color) {
+  if (isBrowser(program)) return pic("internet", size);
   if (!program?.icon || program.shell) return pic("cmd", size);
   if (program.tint) {
     const ink = color ?? (isDark() ? program.color ?? "#e8e8e8" : program.tile ?? "#202020");
@@ -283,6 +298,11 @@ export function paneTitle(p) {
   if (!p) return "";
   if (p.mod) return p.title || p.mod;
   const prog = p.program;
+  if (isBrowser(prog)) {
+    // XP's "<page> - Internet Explorer", without the brand: the page's title when it sets one.
+    const page = (p.title ?? "").trim();
+    return page && !/terminal-browser/i.test(page) ? `${page} - Internet` : "Internet";
+  }
   if (!prog || prog.shell) return `Command Prompt${p.cwd ? ` - ${tildePath(p.cwd)}` : ""}`;
   const t = (p.title ?? "").trim();
   return t && t !== prog.name ? `${prog.name} - ${t}` : prog.name;
@@ -364,7 +384,7 @@ export function togglePanel(which) {
   run("layout.show", { id: "panel" });
 }
 
-/** Does what a menu row or button names: { run: [cmd, args] } | { runs: [[cmd, args], ...] } | { open: role } | { dialog: kind } | { shared: [k, v] } | { panel: "files" | "changes" } | { boot } */
+/** Does what a menu row or button names: { run: [cmd, args] } | { runs: [[cmd, args], ...] } | { open: role } | { dialog: kind } | { shared: [k, v] } | { panel: "files" | "changes" } | { browser: true | url } | { boot } */
 export function perform(act) {
   if (act?.renamePane) { openPaneRename(act.renamePane); return; }
   if (!act) return;
@@ -374,6 +394,7 @@ export function perform(act) {
   if (act.dialog) openDialog(act.dialog, act.props ?? {});
   if (act.shared) setShared(act.shared[0], act.shared[1]);
   if (act.panel) togglePanel(act.panel);
+  if (act.browser) openBrowser(typeof act.browser === "string" ? act.browser : undefined);
 }
 
 const WINDOWS = {

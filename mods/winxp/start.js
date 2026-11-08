@@ -1,5 +1,5 @@
 // The Start menu: XP's two columns under a blue banner with your picture.
-// Left: pinned (Command Prompt, your first agent), then often used (other
+// Left: pinned (Internet, Command Prompt, your first agent), then often used (other
 // agents, the games, the tour), then All Programs ▸. Right: My Spaces ▸,
 // My Recent Tabs ▸, My Computer; Control Panel, Layouts ▸ (the layout
 // switcher); Help and Support, Search, Run. Bottom: Log Off, Turn Off.
@@ -138,6 +138,7 @@ export default class StartMenu {
       .bg(P.menuLeft)
       .pt(6)
       .px(5)
+      .child(this.item(P, "internet", "internet", "Internet", { browser: true }, { bold: true, sublabel: "Web browser" }))
       .child(this.item(P, "cmd", "cmd", "Command Prompt", { run: ["tab.new", {}] }, { bold: true, sublabel: "A new tab" }))
       .when(Boolean(first), (el) => el.child(this.item(P, `a-${first.key}`, { program: first }, first.name, { run: ["tab.new", { name: first.name, argv: first.run }] }, { bold: true, sublabel: "Coding agent" })))
       .child(this.sep(P.menuSep))

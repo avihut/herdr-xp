@@ -17,6 +17,7 @@ import { watchNetwork, networkTip, networkReport, networkName, networkIcon } fro
 import { dropPosition } from "./taborder.js";
 
 const SLOP = 4; // px a press moves before it is a drag, not a click
+const READABLE = 110; // px a tab's button needs before tabs start sharing a button
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -319,6 +320,17 @@ export default class Taskbar {
     return dropPosition(order, d.id, ids, d.over.side) ? d.over.side : null;
   }
 
+  /** Do n buttons fit the task strip at a readable width? Before the strip has reported its
+   *  width, XP's old rule: up to five. */
+  fits(n) {
+    // Herdr may report sizes for a mod's root only: then the strip is the bar less the start
+    // button, Quick Launch and the tray (about 230 px).
+    const quick = (6 + (this.quick?.length ?? 0)) * 25;
+    const strip = this.stripW ?? (this.barW ? this.barW - 100 - quick - 230 : 0);
+    if (!strip) return n <= 5;
+    return (strip - 8 - 3 * (n - 1)) / n >= READABLE;
+  }
+
   tasks(P, tabs) {
     const order = tabs.map((t) => t.id);
     const info = tabs.map((t) => {
@@ -342,16 +354,29 @@ export default class Taskbar {
         onClick: () => (pressed ? run("tab.settle", { id: t.id }) : run("tab.select", { id: t.id })),
       });
     };
-    if (info.length <= 5) return info.map(tabButton);
-    // XP's taskbar grouping: tabs of one program share a button that lists them.
+    // XP's taskbar grouping, only when the buttons would get too narrow to read: the program with
+    // the most tabs folds into one button first, then the next, until the rest fit the strip.
     const groups = new Map();
     for (const i of info) groups.set(i.key, [...(groups.get(i.key) ?? []), i]);
+    const fold = new Set();
+    let count = info.length;
+    for (const [key, list] of [...groups].filter(([, l]) => l.length > 1).sort((a, b) => b[1].length - a[1].length)) {
+      if (this.fits(count)) break;
+      fold.add(key);
+      count -= list.length - 1;
+    }
+    if (!fold.size) return info.map(tabButton);
     const out = [];
-    for (const [key, list] of groups) {
-      if (list.length === 1) {
-        out.push(tabButton(list[0]));
+    const placed = new Set();
+    for (const i of info) {
+      if (!fold.has(i.key)) {
+        out.push(tabButton(i));
         continue;
       }
+      if (placed.has(i.key)) continue;
+      placed.add(i.key);
+      const key = i.key;
+      const list = groups.get(key);
       const active = list.some(({ t }) => t.active && !t.settled);
       const ids = list.map(({ t }) => t.id);
       const status = list.some(({ t }) => t.status === "blocked") ? "blocked" : list.some(({ t }) => t.status === "working") ? "working" : null;
@@ -541,6 +566,11 @@ export default class Taskbar {
     const space = spaces().find((s) => s.active) ?? spaces()[0];
     return div()
       .id("xp-taskbar")
+      .on_size_change((size, cx) => {
+        if (Math.abs((this.barW ?? 0) - size.width) < 2) return;
+        this.barW = size.width;
+        cx.notify();
+      })
       .relative()
       .size_full()
       .font_family(uiFont())
@@ -562,6 +592,11 @@ export default class Taskbar {
           .child(
             h_flex()
               .id("task-strip")
+              .on_size_change((size, cx) => {
+                if (Math.abs((this.stripW ?? 0) - size.width) < 2) return;
+                this.stripW = size.width;
+                cx.notify();
+              })
               .flex_1()
               .min_w(0)
               .h_full()

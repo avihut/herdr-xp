@@ -379,40 +379,34 @@ export default class Desktop {
         box: s.nesting.childCount ? this.treeBox(s) : null,
         open: () => run("space.select", { id: s.id }),
         menu: () => this.spaceMenu(s),
-        ...this.dragHooks(s, markOf(s), false),
+        ...this.dragHooks(s, markOf(s), fade.has(s.id)),
       });
+      out.push(folder);
       const kids = [];
       while (rows[i + 1]?.nesting.depth > 0) kids.push(rows[++i]);
-      // A root and the panel of its child spaces move as one group, so the bar can go below both.
-      out.push(
-        v_flex()
-          .id(`desk-group-${s.id}`)
-          .relative()
-          .flex_none()
-          .items_center()
-          .gap(4)
-          .when(fade.has(s.id), (el) => el.opacity(0.5))
-          .when(Boolean(land?.group && land.on === s.id), (el) => el.child(this.bar("after", 6, -4)))
-          .child(folder)
-          .when(kids.length > 0, (el) =>
-            el.child(
-              v_flex()
-                .id(`desk-kids-${s.id}`)
-                .flex_none()
-                .w(92)
-                .mt(-2)
-                .p(2)
-                .gap(1)
-                .rounded(4)
-                .bg("#0000002e")
-                .border_1()
-                .border_color("#ffffff33")
-                .on_mouse_move((e, cx) => this.overGroup(s, e, cx))
-                .on_mouse_up("left", (_e, cx) => this.upGroup(s, cx))
-                .children(kids.map((k) => this.childRow(P, k, kids.some((x) => x.nesting.childCount > 0), markOf(k), fade.has(k.id) && !fade.has(s.id)))),
-            ),
-          ),
-      );
+      // The panel of a root's child spaces sits right under its folder, straight in the desktop's
+      // column (wrapping the two in one box broke the column's layout: the next folder overlapped
+      // the panel). Landing after the root draws the bar below this panel.
+      if (kids.length)
+        out.push(
+          v_flex()
+            .id(`desk-kids-${s.id}`)
+            .relative()
+            .flex_none()
+            .w(92)
+            .mt(-2)
+            .p(2)
+            .gap(1)
+            .rounded(4)
+            .bg("#0000002e")
+            .border_1()
+            .border_color("#ffffff33")
+            .when(fade.has(s.id), (el) => el.opacity(0.5))
+            .when(Boolean(land?.group && land.on === s.id), (el) => el.child(this.bar("after", 0, -5)))
+            .on_mouse_move((e, cx) => this.overGroup(s, e, cx))
+            .on_mouse_up("left", (_e, cx) => this.upGroup(s, cx))
+            .children(kids.map((k) => this.childRow(P, k, kids.some((x) => x.nesting.childCount > 0), markOf(k), fade.has(k.id) && !fade.has(s.id)))),
+        );
     }
     return out;
   }

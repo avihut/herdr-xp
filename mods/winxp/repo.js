@@ -2,7 +2,7 @@
 // (no drawing), so another layout's mod can copy this file as it is.
 //   where()                       { cwd, on, key }: the focused pane's folder (on: its machine)
 //   listFolder(path, on)          [{ name, dir }], folders first, without .git
-//   gitMarks(cwd, on)             { "<abs path>": "A" | "M" | "D" | "U" }
+//   gitMarks(cwd, on)             { root, marks: { "<abs path>": "A" | "M" | "D" | "U" } } (root: null outside Git)
 //   readChanges(cwd, on)          { root, hasHead, files: [{ path, status, fresh, add, del, binary }], limited }
 //   fileDiff(state, file)         the diff's lines (hunks from "@@"), or one line saying why there are none
 //   diffRows(lines)               [{ kind: "@" | "+" | "-" | " " | "", number, text }]
@@ -71,11 +71,11 @@ const statusOf = (xy) => (xy.includes("U") || xy === "AA" || xy === "DD" ? "U" :
 
 export async function gitMarks(cwd, on) {
   const root = await gitRoot(cwd, on);
-  if (!root || (await ownFilters(root, on))) return {};
-  const r = await exec("git", [...READ, ...STATUS], { cwd: root, on }).catch(() => null);
   const marks = {};
+  if (!root || (await ownFilters(root, on))) return { root, marks };
+  const r = await exec("git", [...READ, ...STATUS], { cwd: root, on }).catch(() => null);
   if (r?.code === 0) for (const e of r.stdout.split("\0").filter(Boolean).slice(0, 5000)) marks[`${root}/${e.slice(3)}`] = statusOf(e.slice(0, 2));
-  return marks;
+  return { root, marks };
 }
 
 export async function readChanges(cwd, on) {

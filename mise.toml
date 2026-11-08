@@ -22,5 +22,8 @@ description = "Screenshot the Herdr window to preview.png"
 run = "herdr-app shot preview.png"
 
 [tasks.test]
-description = "Verify staged installation preservation and rollback"
-run = "python3 -m unittest discover -s tests -p 'test_*.py'"
+description = "Verify staged installation and rollback, and the bars' folder watch"
+run = [
+  "python3 -m unittest discover -s tests -p 'test_*.py'",
+  "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'tests/*.test.mjs'",
+]

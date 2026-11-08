@@ -114,7 +114,8 @@
                   "content": {
                     "mod": "winxp",
                     "props": {
-                      "role": "folders"
+                      "role": "folders",
+                      "bar": true
                     }
                   }
                 },
@@ -124,7 +125,8 @@
                   "content": {
                     "mod": "winxp",
                     "props": {
-                      "role": "changes"
+                      "role": "changes",
+                      "bar": true
                     }
                   }
                 }

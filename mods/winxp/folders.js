@@ -1,12 +1,15 @@
 // The Folders bar (the folders role): the focused pane's folder as XP's Explorer tree, in the
 // Explorer bar on the right. Folders open with the [+]/[-] box or a click on their name; a file
 // opens a read-only preview with a Back button. Git's changes mark files (A, M, D, U). It follows
-// the focused pane and refreshes when the folder changes (repo.js reads it).
+// the focused pane and refreshes when the folder changes (repo.js reads it). A copy stays alive
+// once shown, its timer running while the bar is closed, so a closed bar sleeps: no reads and no
+// folder watch until it shows again.
 
-import { watchFolder, readTextFile, theme, settings } from "herdr";
+import { watchFolder, readTextFile, theme, settings, home } from "herdr";
 import { Editor, EditorState } from "gpui-base";
-import { div, h_flex, v_flex, pal, pic, uiFont } from "./kit.js";
+import { div, h_flex, v_flex, pal, pic, uiFont, panelShown } from "./kit.js";
 import { where, listFolder, gitMarks, PER_FOLDER } from "./repo.js";
+import { Watch, watchable } from "./watch.js";
 
 const ROW = 18;
 const INDENT = 19;
@@ -15,11 +18,24 @@ const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", 
 const MARK = { A: "#2a9d2a", M: "#d07a00", D: "#d0281e", U: "#d0281e" };
 
 export default class Folders {
-  init(_p, cx) {
+  init(p, cx) {
+    this.bar = Boolean(p?.bar);
     this.saved = new Map(); // what was open, per folder
+    this.watcher = new Watch(watchFolder);
     this.reset(null);
     this.refresh(cx);
-    cx.timer.every(10000, (cx) => this.refresh(cx));
+    cx.timer.every(10000, (cx) => (this.live() ? this.refresh(cx) : this.sleep()));
+  }
+
+  /** In the Explorer bar (props.bar), only while it shows; a role opened as a pane is always live. */
+  live() {
+    return !this.bar || panelShown() === "files";
+  }
+
+  /** The bar closed: stop reading, and let the folder watch end at its next change. */
+  sleep() {
+    this.asleep = true;
+    this.watcher.stop();
   }
 
   reset(here) {
@@ -31,7 +47,7 @@ export default class Folders {
     this.error = null;
     this.limited = false;
     this.loading = false;
-    this.watched = null;
+    this.watcher.stop();
     this.closePreview();
   }
 
@@ -39,19 +55,12 @@ export default class Folders {
     return this.here === here && where().key === here.key;
   }
 
-  watch(here, cx) {
-    if (here.on || this.watched === here.cwd) return;
-    this.watched = here.cwd;
-    cx.spawn(async (cx) => {
-      try {
-        while (this.current(here)) {
-          await watchFolder(here.cwd);
-          if (this.current(here)) this.refresh(cx);
-        }
-      } catch {
-        if (this.here === here) this.watched = null;
-      }
-    });
+  /** One watch loop (watch.js): another folder or a closed bar ends it. A folder outside Git, or
+   *  home-sized, isn't watched; the 10-second timer refreshes it. */
+  watch(here, root, cx) {
+    if (here.on || !watchable(here.cwd, root, home())) return this.watcher.stop();
+    const loop = this.watcher.begin(here.cwd, () => this.current(here) && this.live(), (cx) => this.refresh(cx));
+    if (loop) cx.spawn(loop);
   }
 
   async load(path, here) {
@@ -84,11 +93,11 @@ export default class Folders {
             this.open.delete(path); // a folder that went away
           });
         }
-        const marks = await gitMarks(here.cwd, here.on);
+        const { root, marks } = await gitMarks(here.cwd, here.on);
         if (!this.current(here)) return;
         this.marks = marks;
         this.error = null;
-        this.watch(here, cx);
+        this.watch(here, root, cx);
       } catch (e) {
         if (this.current(here)) this.error = String(e?.message ?? e);
       } finally {
@@ -306,7 +315,10 @@ export default class Folders {
   }
 
   render(cx) {
-    if (where().key !== this.here?.key) this.refresh(cx);
+    if (where().key !== this.here?.key || (this.asleep && this.live())) {
+      this.asleep = false;
+      this.refresh(cx);
+    }
     const P = pal();
     return v_flex()
       .id("xp-folders")

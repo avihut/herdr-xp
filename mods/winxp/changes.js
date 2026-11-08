@@ -1,18 +1,22 @@
 // The Changes bar (the changes role): the Git changes in the focused pane's folder, in XP's
 // Details view (Name, In Folder, Changes), the picked file's diff below it, and a commit box.
-// It follows the focused pane and refreshes when the repository changes (repo.js reads Git).
+// It follows the focused pane and refreshes when the repository changes (repo.js reads Git). A
+// copy stays alive once shown, its timer running while the bar is closed, so a closed bar sleeps:
+// no Git reads and no folder watch until it shows again.
 
-import { watchFolder, settings } from "herdr";
+import { watchFolder, settings, home } from "herdr";
 import { InputState, Input, Scrollbar, v_virtual_list } from "gpui-base";
-import { div, h_flex, v_flex, pal, pic, grad, uiFont, button } from "./kit.js";
+import { div, h_flex, v_flex, pal, pic, grad, uiFont, button, panelShown } from "./kit.js";
 import { where, readChanges, fileDiff, diffRows, commitAll } from "./repo.js";
+import { Watch, watchable } from "./watch.js";
 
 const ROW = 18;
 const LINE = 16;
 const BADGE = { A: ["#2a9d2a", "Added"], M: ["#d07a00", "Modified"], D: ["#d0281e", "Deleted"], U: ["#d0281e", "Conflict"] };
 
 export default class Changes {
-  init(_p, cx) {
+  init(p, cx) {
+    this.bar = Boolean(p?.bar);
     this.files = [];
     this.lines = [];
     this.rows = [];
@@ -25,23 +29,28 @@ export default class Changes {
       if (had !== Boolean(this.message.trim())) cx.notify();
     });
     this.input.on("submit", (_e, cx) => this.commit(cx));
+    this.watcher = new Watch(watchFolder);
     this.refresh(cx);
-    cx.timer.every(10000, (cx) => this.refresh(cx));
+    cx.timer.every(10000, (cx) => (this.live() ? this.refresh(cx) : this.sleep()));
   }
 
-  watch(root, cx) {
-    if (this.state?.on || this.watched === root) return;
-    this.watched = root;
-    cx.spawn(async (cx) => {
-      try {
-        while (this.watched === root) {
-          await watchFolder(root);
-          if (this.watched === root) this.refresh(cx);
-        }
-      } catch {
-        this.watched = null;
-      }
-    });
+  /** In the Explorer bar (props.bar), only while it shows; a role opened as a pane is always live. */
+  live() {
+    return !this.bar || panelShown() === "changes";
+  }
+
+  /** The bar closed: stop reading, and let the folder watch end at its next change. */
+  sleep() {
+    this.asleep = true;
+    this.watcher.stop();
+  }
+
+  /** One watch loop (watch.js): another folder or a closed bar ends it. A repository rooted at
+   *  home or above isn't watched; the 10-second timer refreshes it. */
+  watch(root, key, cx) {
+    if (this.state?.on || !watchable(root, root, home())) return this.watcher.stop();
+    const loop = this.watcher.begin(root, () => this.key === key && this.live(), (cx) => this.refresh(cx));
+    if (loop) cx.spawn(loop);
   }
 
   setLines(lines) {
@@ -61,7 +70,7 @@ export default class Changes {
       this.setLines([]);
       this.error = null;
       this.note = null;
-      this.watched = null;
+      this.watcher.stop();
     }
     if (!here.cwd) return;
     this.loading = true;
@@ -74,7 +83,7 @@ export default class Changes {
         this.limited = state.limited;
         this.error = state.error ?? null;
         if (!state.root) return this.setLines([]);
-        this.watch(state.root, cx);
+        this.watch(state.root, here.key, cx);
         if (this.pick && !this.files.some((f) => f.path === this.pick)) {
           this.pick = null;
           this.setLines([]);
@@ -201,7 +210,10 @@ export default class Changes {
   }
 
   render(cx) {
-    if (where().key !== this.key) this.refresh(cx);
+    if (where().key !== this.key || (this.asleep && this.live())) {
+      this.asleep = false;
+      this.refresh(cx);
+    }
     const P = pal();
     const add = this.files.reduce((n, f) => n + f.add, 0);
     const del = this.files.reduce((n, f) => n + f.del, 0);

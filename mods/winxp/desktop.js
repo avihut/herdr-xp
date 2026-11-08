@@ -27,14 +27,8 @@ const SLOP = 4; // px a press moves before it is a drag, not a click
 const WALL = (k) => `mods/winxp/img/wallpaper-${k}.svg`;
 
 export default class Desktop {
-  init(_p, cx) {
-    this.clippy = new Assistant();
-    if (cx) this.clippy.start(cx);
-    // agents() changing doesn't re-render the desktop by itself: look every 2 s whether the
-    // assistant's balloon should change, and render only then.
-    cx?.timer.every(2000, (cx) => {
-      if ((this.clippy.want()?.key ?? null) !== (this.clippy.balloon?.key ?? null)) cx.notify();
-    });
+  init() {
+    this.clippy = new Assistant(); // Herdr's live model re-renders the desktop when agents change
     this.asked = null;
     this.sel = null;
   }

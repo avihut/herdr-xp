@@ -2,9 +2,9 @@
 // When an agent needs you (blocked) or finished while you looked away (done), a yellow Office XP
 // balloon offers to take you there. Click the paperclip for a tip. The balloon's "Hide me",
 // Display Properties or Start > All Programs > Accessories > Office Assistant hide and show it
-// (shared winxp.clippy: "off" hides it). Every so often it blinks, looks around, hops, wiggles,
-// stretches, naps or leans in (ACTS). The paperclip is drawn here (img/clippy*.svg), not taken
-// from Office.
+// (shared winxp.clippy: "off" hides it). Now and then it blinks, looks around, hops, wiggles or
+// naps (SCRIPT, played natively); "Hold still" stops that. The paperclip is drawn here
+// (img/clippy*.svg), not taken from Office.
 //
 // The desktop draws the paperclip itself (Assistant.element), straight on the wallpaper: Herdr
 // frames a floating block with a panel of its own, which an assistant shouldn't have. Its balloon
@@ -43,28 +43,57 @@ const LINE = 14;
 
 const dismissed = () => shared("winxp.clippy.dismissed") ?? [];
 
-// Its quirks, every so often while it has nothing to say: a blink every 4-12 s, and every 40-90 s
-// one of these. A pose is an eye drawing (img/clippy-*.svg); dx, dy, w and h move and stretch it,
-// animated natively (transition). Each step holds for its ms and changes only what it names.
-const POSE = { rest: "clippy", front: "clippy-front", left: "clippy-left", up: "clippy-up", shut: "clippy-shut" };
-const REST = { pose: "rest", dx: 0, dy: 0, w: CLIP_W, h: CLIP_H };
-const ACTS = {
-  lookAround: [[450, { pose: "left" }], [380, { pose: "up" }], [480, { pose: "front" }], [260, { pose: "rest" }]],
-  huh: [[160, { pose: "up", dy: -12 }], [720, { dy: 0 }]],
-  bounce: [[150, { dy: -12 }], [150, { dy: 0 }], [130, { dy: -7 }], [130, { dy: 0 }], [110, { dy: -3 }], [110, { dy: 0 }]],
-  wiggle: [[90, { dx: 4 }], [90, { dx: -4 }], [90, { dx: 4 }], [90, { dx: -4 }], [90, { dx: 2 }], [90, { dx: 0 }]],
-  stretch: [[230, { w: CLIP_W - 4, h: CLIP_H + 12, dx: 2, dy: -12 }], [190, { w: CLIP_W + 6, h: CLIP_H - 8, dx: -3, dy: 8 }], [210, { w: CLIP_W, h: CLIP_H, dx: 0, dy: 0 }]],
-  nap: [[300, { pose: "shut" }], [1700, { dy: 4 }], [170, { pose: "up", dy: -10 }], [650, { dy: 0 }]],
-  lean: [[260, { pose: "front", w: CLIP_W + 8, h: CLIP_H + 10, dx: -4, dy: -10 }], [950, {}], [260, { w: CLIP_W, h: CLIP_H, dx: 0, dy: 0 }]],
-};
-const HOP = [[120, { pose: "up", dy: -8 }], [220, { dy: 0 }]];
+// Its quirks, played natively: no JavaScript timer redraws anything. A five-minute script (built
+// once, from a fixed seed) says, for each 120 ms tick, which eye drawing shows (img/clippy-*.svg
+// over the resting one), how far it's lifted and how far it's shifted. GPUI's .frames() plays it:
+// each pose's layer is clipped to the width of an invisible text that is either empty (hidden) or
+// long (shown), and the lift and shift are invisible texts of so many lines or dots under and
+// beside it. Every copy shares one clock, so they stay in step. "Hold still" (winxp.clippy.still,
+// in its balloon or Display Properties) leaves the resting drawing alone.
+const TICK = 120;
+const CYCLE = 2500; // ticks: five minutes, then it starts over
+const LAYERS = ["shut", "left", "up", "front"];
+const CLEAR = "#00000000";
+const LIFT_PX = 3; // per line of the lift text
+const REST_LIFT = 1;
+const REST_SHIFT = 2;
+
+function seeded(n) {
+  return () => ((n = (n * 1103515245 + 12345) % 2147483648) / 2147483648);
+}
+
+const SCRIPT = (() => {
+  const pose = Array(CYCLE).fill("");
+  const lift = Array(CYCLE).fill(REST_LIFT);
+  const shift = Array(CYCLE).fill(REST_SHIFT);
+  const rnd = seeded(20011025);
+  const put = (t, list, key) => list.forEach((v, k) => t + k < CYCLE && v !== undefined && (key === "pose" ? (pose[t + k] = v) : key === "lift" ? (lift[t + k] = v) : (shift[t + k] = v)));
+  const ACTS = {
+    lookAround: { pose: Array(4).fill("left").concat(["up", "up", "up", "front", "front", "front", "front"]) },
+    huh: { pose: Array(8).fill("up"), lift: [5, 5, 4, 3, 2, 2, 1] },
+    bounce: { lift: [5, 3, 1, 4, 2, 1, 3, 1] },
+    wiggle: { shift: [4, 0, 4, 0, 4, 1, 3, 2] },
+    nap: { pose: Array(18).fill("shut").concat(["up", "up", "up", "up", "up"]), lift: Array(16).fill(0).concat([0, 0, 5, 4, 3, 2, 1]) },
+  };
+  const order = ["lookAround", "bounce", "huh", "wiggle", "nap", "lookAround", "huh", "bounce"];
+  let a = 0;
+  for (let t = Math.round(20000 / TICK); t < CYCLE - 40; t += Math.round((40000 + rnd() * 40000) / TICK)) {
+    const act = ACTS[order[a++ % order.length]];
+    for (const key of ["pose", "lift", "shift"]) if (act[key]) put(t, act[key], key);
+  }
+  for (let t = 30; t < CYCLE; t += Math.round((4000 + rnd() * 7000) / TICK)) if (!pose[t] && !pose[t + 1]) pose[t] = "shut";
+  const text = (n, ch) => Array(n).fill(ch).join(ch === "." ? "" : "\n");
+  return {
+    layers: Object.fromEntries(LAYERS.map((l) => [l, pose.map((p) => (p === l ? "MMMMMMMMMMMMMMMM" : ""))])),
+    lift: lift.map((n) => text(n, "|")),
+    shift: shift.map((n) => text(n, ".")),
+  };
+})();
 
 /** The desktop's half: the paperclip, and the balloon it keeps open or closed. */
 export class Assistant {
   constructor() {
     this.balloon = null; // { key, id, at }
-    this.frame = { ...REST };
-    this.playing = false;
     // A balloon left open by the previous build of the mod (a reload) has no owner now.
     const old = shared("winxp.clippy.balloonId");
     if (old) closeOverlays([old]);
@@ -74,44 +103,8 @@ export class Assistant {
     return shared("winxp.clippy") !== "off";
   }
 
-  /** Starts its quirks (the desktop calls this from init). */
-  start(cx) {
-    const later = (min, span, fn) => cx.timer.after(min + Math.random() * span, (c) => fn(c ?? cx));
-    const blink = (x) => {
-      if (this.idle()) this.play([[140, { pose: "shut" }]], x);
-      later(4000, 8000, blink);
-    };
-    const act = (x) => {
-      const names = Object.keys(ACTS);
-      if (this.idle()) this.play(ACTS[names[Math.floor(Math.random() * names.length)]], x);
-      later(40000, 50000, act);
-    };
-    later(4000, 8000, blink);
-    later(20000, 30000, act);
-  }
-
-  idle() {
-    return this.shown() && !this.playing && !this.balloon;
-  }
-
-  /** Plays steps ([ms, change]) in turn, then back to rest. */
-  play(steps, cx) {
-    this.playing = true;
-    let i = 0;
-    const next = (c) => {
-      const x = c ?? cx;
-      if (i >= steps.length) {
-        this.frame = { ...REST };
-        this.playing = false;
-        x.notify();
-        return;
-      }
-      const [ms, change] = steps[i++];
-      this.frame = { ...this.frame, ...change };
-      x.notify();
-      x.timer.after(ms, next);
-    };
-    next(cx);
+  still() {
+    return shared("winxp.clippy.still") === true;
   }
 
   tips() {
@@ -153,6 +146,7 @@ export class Assistant {
       actions: [
         ["Next tip", { shared: ["winxp.clippy.tip", (i + 1) % tips.length] }],
         ["Close", { shared: ["winxp.clippy.tip", null] }],
+        this.still() ? ["Move around again", { shared: ["winxp.clippy.still", false] }] : ["Hold still", { shared: ["winxp.clippy.still", true] }],
         ["Hide me", { shared: ["winxp.clippy", "off"] }],
       ],
     };
@@ -194,46 +188,57 @@ export class Assistant {
   }
 
   /** The paperclip, for the desktop to place over its strip's bottom; null while hidden. While an
-   *  agent's balloon is up it bobs; otherwise it shows its current quirk's frame. */
+   *  agent's balloon is up it bobs (a native loop); otherwise it plays its script, unless held
+   *  still. Nothing here asks for a render. */
   element(talking) {
     if (!this.shown()) return null;
-    const f = talking ? REST : this.frame;
-    return own(
+    const lively = !talking && !this.still();
+    const img = (name) => image(`mods/winxp/img/${name}.svg`).absolute().top(0).left(0).w(CLIP_W).h(CLIP_H);
+    // A pose's layer shows as wide as its invisible text: none, or all of the paperclip.
+    const layer = (name) =>
       div()
+        .absolute()
+        .top(0)
+        .left(0)
+        .h(CLIP_H)
+        .max_w(CLIP_W)
+        .overflow_hidden()
+        .child(div().text_size(10).text_color(CLEAR).frames(SCRIPT.layers[name], TICK))
+        .child(img(`clippy-${name}`));
+    const figure = div()
+      .relative()
+      .flex_none()
+      .w(CLIP_W)
+      .h(CLIP_H)
+      .when(talking, (el) => el.loop("top", { from: 0, to: -5, period: 800 }))
+      .child(img("clippy"))
+      .when(lively, (el) => el.children(LAYERS.map(layer)));
+    return own(
+      v_flex()
         .id("clippy")
         .absolute()
-        .left(LEFT)
-        .bottom(BOTTOM)
-        .w(CLIP_W)
-        .h(CLIP_H)
+        .left(LEFT - REST_SHIFT * 2)
+        .bottom(BOTTOM - REST_LIFT * LIFT_PX)
+        .items_start()
         .cursor_pointer()
         .tooltip("Office Assistant")
         .on_click((_e, cx) => {
           const tip = shared("winxp.clippy.tip");
           setShared("winxp.clippy.tip", tip == null ? Math.floor(Math.random() * this.tips().length) : null);
           sfx("clippy");
-          if (!this.playing) this.play(HOP, cx);
           cx.notify();
         })
-        // Every pose, drawn unseen at full size, so a quirk never waits for its picture to load.
-        .child(div().absolute().top(0).left(0).size_full().opacity(0).children(Object.values(POSE).map((p) => image(`mods/winxp/img/${p}.svg`).absolute().top(0).left(0).size_full())))
         .child(
-          div()
-            .relative()
-            .top(f.dy)
-            .left(f.dx)
-            .w(f.w)
-            .h(f.h)
-            .when(talking, (el) => el.loop("top", { from: 0, to: -5, period: 800 }))
-            .when(!talking, (el) =>
-              el
-                .transition("top", { duration: 140, easing: "ease-out" })
-                .transition("left", { duration: 90 })
-                .transition("width", { duration: 180, easing: "ease-out" })
-                .transition("height", { duration: 180, easing: "ease-out" }),
-            )
-            .child(image(`mods/winxp/img/${POSE[f.pose] ?? POSE.rest}.svg`).size_full()),
-        ),
+          h_flex()
+            .items_end()
+            // The shift: so many dots of invisible text to the paperclip's left.
+            .when(lively, (el) => el.child(div().flex_none().text_size(4).text_color(CLEAR).frames(SCRIPT.shift, TICK)))
+            .when(!lively, (el) => el.child(div().flex_none().w(REST_SHIFT * 2)))
+            .child(figure),
+        )
+        // The lift: so many lines of invisible text under it.
+        .when(lively, (el) => el.child(div().flex_none().text_size(2).line_height(`${LIFT_PX}px`).text_color(CLEAR).frames(SCRIPT.lift, TICK)))
+        .when(!lively, (el) => el.child(div().flex_none().h(REST_LIFT * LIFT_PX))),
     );
   }
 }

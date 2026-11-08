@@ -297,15 +297,26 @@ export default class Dialog {
       );
   }
 
-  /** XP's check box for the Office Assistant (clippy.js). It applies at once. */
+  /** XP's check boxes for the Office Assistant (clippy.js): whether it shows, and whether it moves
+   *  around (its reduced-motion control). They apply at once. */
   assistantBox(P) {
-    const on = shared("winxp.clippy") !== "off";
+    const shown = shared("winxp.clippy") !== "off";
+    const moves = shared("winxp.clippy.still") !== true;
+    return v_flex()
+      .flex_none()
+      .gap(4)
+      .child(this.checkBox(P, "dp-clippy", "Show the Office Assistant", shown, () => setShared("winxp.clippy", shown ? "off" : "on")))
+      .child(this.checkBox(P, "dp-clippy-move", "Let it move around (blinks, hops, naps)", moves, () => setShared("winxp.clippy.still", moves), !shown));
+  }
+
+  checkBox(P, id, label, on, toggle, disabled = false) {
     return h_flex()
-      .id("dp-clippy")
+      .id(id)
       .flex_none()
       .gap(6)
       .items_center()
-      .cursor_pointer()
+      .when(!disabled, (el) => el.cursor_pointer())
+      .when(disabled, (el) => el.opacity(0.5))
       .child(
         div()
           .flex_none()
@@ -319,10 +330,11 @@ export default class Dialog {
           .border_color("#1c5180")
           .when(on, (el) => el.child(div().text_size(10).font_weight(700).line_height("10px").text_color("#21a121").child("✓"))),
       )
-      .child(div().text_size(11).child("Show the Office Assistant"))
+      .child(div().text_size(11).child(label))
       .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
       .on_click((_e, cx) => {
-        setShared("winxp.clippy", on ? "off" : "on");
+        if (disabled) return;
+        toggle();
         cx.notify();
       });
   }

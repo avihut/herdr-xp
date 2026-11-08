@@ -35,7 +35,21 @@ A Windows XP-style layout for the [Herdr](https://herdr.dev) desktop app: Luna-b
 
 ## Install
 
-You need the Herdr desktop app (tested with 0.1.13) and Python 3.
+You need the Herdr desktop app (tested with 0.1.13).
+
+### With your agent
+
+Tell the agent in Herdr, as you would for any layout in Herdr's gallery:
+
+```text
+Read ~/.config/herdr-app/AGENTS.md, then add this layout: github.com/avihut/herdr-xp
+```
+
+It reads the files, copies the layout, its themes and the mod, merges the keys, checks the mod and switches to it. Your own layout stays as it is; ⌘⇧L switches back.
+
+### With the script
+
+You need Python 3.
 
 ```sh
 git clone https://github.com/avihut/herdr-xp
@@ -45,7 +59,7 @@ python3 scripts/install.py
 
 With [mise](https://mise.jdx.dev), `mise run install` does the same and then checks the mod.
 
-The script copies `layouts/winxp.json`, the two themes and `mods/winxp` into `~/.config/herdr-app` (or `$HERDR_APP_HOME`). If you have a `keys.json`, it adds Ctrl+Esc to open the Start menu there, unless you already use that key. Herdr treats an edited `keys.json` as yours and stops adding its new default shortcuts to it. The script backs the file up first.
+The script copies `layouts/winxp.json` (with its Settings picture), the two themes and `mods/winxp` into `~/.config/herdr-app` (or `$HERDR_APP_HOME`). If you have a `keys.json`, it adds Ctrl+Esc to open the Start menu and ⌘⇧S to open the Simulator there, unless you already use those keys. Herdr treats an edited `keys.json` as yours and stops adding its new default shortcuts to it. The script backs the file up first.
 
 Then switch to it with ⌘⇧L, or run:
 

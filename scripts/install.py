@@ -29,7 +29,7 @@ def merge_keys(remove=False):
     if not path.exists():
         # Herdr writes keys.json itself; a file holding only our key could stand in for its defaults.
         if not remove:
-            print('  keys.json not found: to open the Start menu with Ctrl+Esc, add "layout:winxp": {"ctrl-escape": "winxp.start"} to it')
+            print(f"  keys.json not found: for Herdr XP's keys (Ctrl+Esc opens the Start menu), add {json.dumps(ours)[1:-1]} to it")
         return False
     current = json.loads(path.read_text())
     merged = json.loads(json.dumps(current))

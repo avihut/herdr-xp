@@ -1,4 +1,5 @@
-// Where a tab dragged along the taskbar lands. Pure, so it can be tested without Herdr.
+// Where a tab dragged along the taskbar, or a space folder dragged on the desktop, lands. Pure,
+// so it can be tested without Herdr (tests/taborder.test.mjs).
 //   order  the space's tab ids, in order
 //   id     the dragged tab
 //   ids    the button it was dropped on: one tab, or a program's group of tabs

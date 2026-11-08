@@ -11,12 +11,16 @@
 // the wallpaper in step with the theme: when the shown theme turns dark or
 // light it points the layout's background at the night or the day picture
 // (layout.set; Herdr caches a background by path).
+// Space folders drag to reorder (space.move): a root folder among the root folders, a child space
+// among its siblings. A white bar shows where it lands; letting go anywhere else does nothing.
 
-import { run, layout, shared } from "herdr";
+import { run, layout, shared, spaces } from "herdr";
 import { div, h_flex, v_flex, pal, pic, isDark, uiFont, openMenu, openWindow, openDialog } from "./kit.js";
 import { GAMES } from "./explorer.js";
 import { primaryRows, toggleSpaceChildren } from "./workspace-tree.js";
+import { dropPosition } from "./taborder.js";
 
+const SLOP = 4; // px a press moves before it is a drag, not a click
 const WALL = (k) => `mods/winxp/img/wallpaper-${k}.svg`;
 
 export default class Desktop {
@@ -50,6 +54,8 @@ export default class Desktop {
       .items_center()
       .gap(2)
       .py(3)
+      .when(Boolean(o.dragging), (el) => el.opacity(0.5))
+      .when(Boolean(o.mark), (el) => el.child(this.bar(o.mark, 6, -4)))
       .child(div().opacity(on ? 0.75 : 1).child(pic(img, 34)))
       .child(
         h_flex()
@@ -68,18 +74,141 @@ export default class Desktop {
               .child(div().relative().text_size(11).text_color(P.deskText).text_center().line_height("13px").max_h(26).overflow_hidden().child(label)),
           ),
       )
-      .on_mouse_down("left", (_e, cx) => {
+      .on_mouse_down("left", (e, cx) => {
         cx.stop_propagation();
         this.sel = key;
+        o.onDown?.(e);
         cx.notify();
       })
-      .on_click(() => o.open?.())
+      .on_mouse_move((e, cx) => (o.onMove ? o.onMove(e, cx) : this.overNothing(e, cx)))
+      .when(Boolean(o.onUp), (el) => el.on_mouse_up("left", (e, cx) => o.onUp(e, cx)))
+      .on_click(() => !this.justDragged() && o.open?.())
       .on_mouse_down("right", (e, cx) => {
         cx.stop_propagation();
         this.sel = key;
         if (o.menu) openMenu(o.menu(), e?.position ? { x: e.position.x, y: e.position.y } : undefined);
         cx.notify();
       });
+  }
+
+  /** The landing bar, above or below a folder. */
+  bar(side, inset, off) {
+    return div()
+      .absolute()
+      .left(inset)
+      .right(inset)
+      .when(side === "before", (el) => el.top(off))
+      .when(side !== "before", (el) => el.bottom(off))
+      .h(3)
+      .rounded(1)
+      .bg("#ffffff")
+      .border_1()
+      .border_color("#0a246a");
+  }
+
+  // ---- reordering spaces by dragging their folders
+  // this.drag = { id, parent, machine, x0, y0, moved, over: { id, side } } from the press to the release.
+
+  press(s, e) {
+    this.drag = e?.position ? { id: s.id, parent: s.nesting.parentId, machine: s.machine ?? null, x0: e.position.x, y0: e.position.y, moved: false, over: null } : null;
+  }
+
+  justDragged() {
+    return Boolean(this.drag?.moved) || Date.now() - (this.dragEndAt ?? 0) < 300;
+  }
+
+  /** Any move: past SLOP the press is a drag. */
+  dragMove(e, cx) {
+    const d = this.drag;
+    if (!d || d.moved || !e?.position) return;
+    if (Math.abs(e.position.x - d.x0) > SLOP || Math.abs(e.position.y - d.y0) > SLOP) {
+      d.moved = true;
+      cx.notify();
+    }
+  }
+
+  /** A space can land beside s only among its own siblings, on the same machine. */
+  sibling(s) {
+    const d = this.drag;
+    return Boolean(d) && s.id !== d.id && s.nesting.parentId === d.parent && (s.machine ?? null) === d.machine;
+  }
+
+  sideOf(e) {
+    return e?.local_position && e?.bounds ? (e.local_position.y < e.bounds.height / 2 ? "before" : "after") : null;
+  }
+
+  /** The pointer is over space s: which half says before or after it. */
+  overSpace(s, e, cx) {
+    this.dragMove(e, cx);
+    const d = this.drag;
+    if (!d?.moved) return;
+    const side = this.sibling(s) ? this.sideOf(e) : null;
+    const over = side ? { id: s.id, side } : null;
+    if (over?.id === d.over?.id && over?.side === d.over?.side) return;
+    d.over = over;
+    cx.notify();
+  }
+
+  overNothing(e, cx) {
+    this.dragMove(e, cx);
+    const d = this.drag;
+    if (!d?.moved || !d.over) return;
+    d.over = null;
+    cx.notify();
+  }
+
+  /** The release over space s. Herdr delivers it to the element under the pointer wherever the
+   *  press was, so this, not the moves, decides the drop. */
+  upOn(s, e, cx) {
+    const d = this.drag;
+    if (!d) return;
+    const far = e?.position ? Math.abs(e.position.x - d.x0) > SLOP || Math.abs(e.position.y - d.y0) > SLOP : false;
+    if (!d.moved && !far && s.id === d.id) {
+      this.drag = null; // a click: on_click opens it
+      return;
+    }
+    cx.stop_propagation();
+    d.moved = true;
+    const side = this.sibling(s) ? this.sideOf(e) ?? (d.over?.id === s.id ? d.over.side : null) : null;
+    d.over = side ? { id: s.id, side } : null;
+    this.drop(cx);
+  }
+
+  drop(cx) {
+    const d = this.drag;
+    this.drag = null;
+    if (!d) return;
+    if (d.moved) {
+      this.dragEndAt = Date.now();
+      const index = d.over ? dropPosition(spaces().map((x) => x.id), d.id, [d.over.id], d.over.side) : null;
+      if (index) run("space.move", { id: d.id, index });
+    }
+    cx.notify();
+  }
+
+  cancelDrag(cx) {
+    if (!this.drag) return;
+    if (this.drag.moved) this.dragEndAt = Date.now();
+    this.drag = null;
+    cx.notify();
+  }
+
+  /** Where the landing bar goes on space s, if the dragged space would move there. */
+  markFor(s) {
+    const d = this.drag;
+    if (!d?.moved || d.over?.id !== s.id) return null;
+    return dropPosition(spaces().map((x) => x.id), d.id, [s.id], d.over.side) ? d.over.side : null;
+  }
+
+  /** The drag hooks a space's folder or row passes to icon() / childRow(). */
+  dragHooks(s) {
+    return {
+      onDown: (e) => this.press(s, e),
+      onMove: (e, cx) => this.overSpace(s, e, cx),
+      onUp: (e, cx) => this.upOn(s, e, cx),
+      mark: this.markFor(s),
+      dragging: Boolean(this.drag?.moved && this.drag.id === s.id),
+    };
   }
 
   /** XP's tree box: [+] while a space's children are hidden, [-] while they show. */
@@ -122,9 +251,13 @@ export default class Desktop {
     const key = `s-${s.id}`;
     const on = this.sel === key || (this.sel === null && s.active);
     const depth = s.nesting.depth;
+    const drag = this.dragHooks(s);
     return h_flex()
       .id(`desk-${key}`)
+      .relative()
       .flex_none()
+      .when(drag.dragging, (el) => el.opacity(0.5))
+      .when(Boolean(drag.mark), (el) => el.child(this.bar(drag.mark, 2, -2)))
       .w_full()
       .py(2)
       .pl(2 + (depth - 1) * 10)
@@ -148,12 +281,15 @@ export default class Desktop {
           .when(!on, (el) => el.child(div().absolute().top(1).left(3).text_size(11).text_color(P.deskShadow).opacity(0.75).line_height("13px").max_h(39).overflow_hidden().child(s.name)))
           .child(div().relative().text_size(11).text_color(P.deskText).line_height("13px").max_h(39).overflow_hidden().child(s.name)),
       )
-      .on_mouse_down("left", (_e, cx) => {
+      .on_mouse_down("left", (e, cx) => {
         cx.stop_propagation();
         this.sel = key;
+        drag.onDown(e);
         cx.notify();
       })
-      .on_click(() => run("space.select", { id: s.id }))
+      .on_mouse_move(drag.onMove)
+      .on_mouse_up("left", drag.onUp)
+      .on_click(() => !this.justDragged() && run("space.select", { id: s.id }))
       .on_mouse_down("right", (e, cx) => {
         cx.stop_propagation();
         this.sel = key;
@@ -173,6 +309,7 @@ export default class Desktop {
           box: s.nesting.childCount ? this.treeBox(s) : null,
           open: () => run("space.select", { id: s.id }),
           menu: () => this.spaceMenu(s),
+          ...this.dragHooks(s),
         }),
       );
       const kids = [];
@@ -231,6 +368,9 @@ export default class Desktop {
         this.sel = null;
         cx.notify();
       })
+      .on_mouse_move((e, cx) => this.dragMove(e, cx))
+      .on_mouse_up("left", (_e, cx) => this.drop(cx)) // between folders: where the bar showed, if it did
+      .on_hover((over, cx) => !over && this.cancelDrag(cx))
       .on_mouse_down("right", (e, cx) => {
         cx.stop_propagation();
         this.desktopMenu(e);

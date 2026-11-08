@@ -14,8 +14,21 @@ export default class Menu {
     this.bounds = {};
     const p = props() ?? {};
     const parents = p.parents ?? [];
-    // A top menu starts the chain over; a submenu joins it.
-    setShared(KEY, parents.length ? [...chain(), { id: p.overlay, parents }] : [{ id: p.overlay, parents: [] }]);
+    // openMenu put this menu in the chain as it opened; a top menu started the chain over.
+    if (!chain().some((m) => m.id === p.overlay)) setShared(KEY, parents.length ? [...chain(), { id: p.overlay, parents }] : [{ id: p.overlay, parents: [] }]);
+    // A submenu whose parent is gone has nothing behind it: it closes too, at once if the parent
+    // went before it showed, else within 150 ms, whatever closed the parent (a hover elsewhere, a
+    // click outside that dismissed only the parent, Esc). Not during a press inside it: that press
+    // may itself have dismissed the parents, and its click still has to land.
+    this.pressedAt = 0;
+    const orphan = () => {
+      const open = new Set(chain().map((m) => m.id));
+      return parents.some((id) => !open.has(id) && id !== shared("winxp.start"));
+    };
+    if (orphan()) closeOverlay(p.overlay);
+    cx.timer.every(150, () => {
+      if (Date.now() - this.pressedAt > 2000 && orphan()) closeOverlay(p.overlay);
+    });
   }
 
   // Only bookkeeping: a press inside a submenu may close this menu first, and closing the
@@ -93,6 +106,12 @@ export default class Menu {
     return v_flex()
       .id("xp-menu")
       .size_full()
+      .on_mouse_down("left", () => {
+        this.pressedAt = Date.now();
+      })
+      .on_mouse_up("left", () => {
+        this.pressedAt = 0;
+      })
       .font_family(uiFont())
       .text_size(11)
       .bg(P.popup)

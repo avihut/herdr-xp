@@ -479,15 +479,21 @@ export function openMenu(items, at, o = {}) {
     if (where.x + W > win.width) where.x = b.x - W + 3;
   }
   if (where) where = { x: Math.max(0, Math.min(where.x, win.width - W)), y: Math.max(0, Math.min(where.y, win.height - H)) };
-  return openOverlay({
+  const parents = o.parents ?? [];
+  const id = openOverlay({
     mod: "winxp",
     kind: "popup",
     frame: "none",
     width: W,
     height: H,
     ...(where ? { at: where } : {}),
-    props: { role: "menu", items, parents: o.parents ?? [] },
+    props: { role: "menu", items, parents },
   });
+  // The chain (winxp.menus) learns of a menu as it opens, not when it first shows: a pointer
+  // sweeping on can close its parent in between, and closeMenuTree must still find it.
+  const chain = shared("winxp.menus") ?? [];
+  setShared("winxp.menus", parents.length ? [...chain.filter((m) => m.id !== id), { id, parents }] : [{ id, parents: [] }]);
+  return id;
 }
 
 export function closeOverlays(ids) {

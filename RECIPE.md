@@ -79,13 +79,15 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
   - `themes/winxp.json` (light) and `themes/winxp-dark.json`, the pair the layout's `theme` names. Both have black terminals with the 16 console colors; they differ in their panel colors.
   - `mods/winxp`, one mod with roles.
   - `keys.json`: merge `"layout:winxp": {"ctrl-escape": "winxp.start", "cmd-shift-s": "winxp.simulator"}` into the person's.
-  - Optional, each from its own repo: Herdr Sim's `herdr-sim` mod, Pane Rename's `pane-rename` mod, and the `terminal-browser` program. Without them, their controls don't show.
-- **Programs and files outside the mod.** Nothing reaches the network.
-  - It runs `git` for the Folders and Changes bars (Changes' Commit runs `git commit`) and `sh` to list a folder.
-  - The tray runs `pmset`, `scutil`, `networksetup` and `ifconfig` for the battery and network.
-  - Internet runs `terminal-browser`.
-  - It reads the focused pane's folder and its Git repository (the bars and file previews), and `~/.config/herdr-space-tree.json` and `~/.config/herdr-space-folders.json` (the space hierarchy).
-  - It reads Herdr's `settings.json`, which Display Properties writes (`appearance`), and looks for `mods/herdr-sim/mod.json` and `mods/pane-rename/mod.json` to see whether those mods are installed.
+  - Optional, each from its own repo: Herdr Sim's `herdr-sim` mod, Pane Rename's `pane-rename` and `pane-rename-menu` mods, and the `terminal-browser` program. Without them, their controls don't show.
+- **Programs and files outside the mod.** The mod makes no web requests of its own; Internet opens `terminal-browser`, a real web browser.
+  - The Folders and Changes bars run `git` and `sh` (to list a folder). They only read until you press Commit, which runs `git add -A` and `git commit`. For a pane on another machine, they run there.
+  - The tray runs `pmset` every 30 s, `scutil` and `ifconfig` every 10 s, and `networksetup` once, for the battery and network.
+  - Run, Start's programs and the agents menu start what you pick: a command, a shell or an installed agent.
+  - It reads the focused pane's folder and its Git repository (the bars and file previews).
+  - It reads `~/.config/herdr-space-tree.json` and `~/.config/herdr-space-folders.json`, the space hierarchy, every 15 s. For a space on another machine, it reads that machine's copies there with `sh -c cat`.
+  - It reads Herdr's `settings.json`, and Display Properties writes its `appearance`. It rewrites its own layout's wallpaper with `layout.set` when the theme turns.
+  - It looks for `mods/herdr-sim/mod.json` and `mods/pane-rename/mod.json` to see whether those mods are installed.
 - **Layout tree.**
   - A root column with the theme pair, the wallpaper, `ui_font` Tahoma, the VGA terminal font, `titlebar: "none"` and `traffic_lights`.
   - A row containing `desktop`, a 96 px block with `window_drag`, and `main`, the `{ "tab": "active" }` block whose pane header is the `window` role. `main` has `"movable": false`, which hides Herdr's pane grip; the title bars move windows instead.
@@ -109,7 +111,10 @@ Dark theme: the title bars, taskbar, start button and tray stay Luna blue. Menus
 ## Watch out
 
 - Copy the themes and `layouts/winxp.svg` along with the layout and the mod. Without the themes, the layout's `theme` names nothing: terminals lose their console black and the menus and dialogs their XP colors.
-- The layout's Explorer bar names `herdr-sim`, a mod this repo doesn't ship. Keep that block even when Herdr Sim isn't installed. It's a stack child that only the Simulator controls show, and they appear only when `mods/herdr-sim/mod.json` exists.
+- The layout names two mods this repo doesn't ship; keep both as they are.
+  - The Explorer bar's `herdr-sim` block stays even when Herdr Sim isn't installed. It's a stack child that only the Simulator controls show, and they appear only when `mods/herdr-sim/mod.json` exists.
+  - `"terminal_menu": "pane-rename-menu"` is Pane Rename's terminal menu. Without it, Herdr logs a warning and uses its own menu.
+- To update an earlier install, replace its files, swapping the mod folder in whole; don't add a renamed second copy. `winxp` is more than the folder's name: overlays open `mod: "winxp"`, key commands are `winxp.*` under `layout:winxp`, Refresh runs `layout.switch {name: "winxp"}`, and the wallpaper path is `mods/winxp/img/…`. A rename must change them all.
 - A header mod can't start Herdr's pane drag, and gets mouse moves only while the pointer is over it. So `panedrag.js` has the title bar open a full-window popup once the press moves 4 px or leaves the bar. The popup gets the moves and the release wherever they happen. No API reports a pane's position: each title bar records its own box from `on_mouse_down_out`, which gives an element its bounds even for a press outside it. Windows trade places through `pane.swap`, which acts on the focused pane and its neighbor. To swap with a window further away, swap along neighbors and back. Only take a step where one side has exactly one neighbor in that direction.
 - A popup gives its content no height. The drag layer sizes its root to the window, or it is a 0 px strip and the drag does nothing.
 - No command puts a pane beside another. An edge drop parks the window's terminal (`terminal.park`: the pane goes, the program keeps running), focuses the target, and gives the terminal a pane again with `terminal.keep {place: right | down}`. For left or above it then swaps once. Both acknowledge first and apply later, so each step waits until `panes()` shows the change. The taskbar runs this from shared `winxp.place`, because the layer may close mid-move. A mod pane has no terminal, so it can only trade places.

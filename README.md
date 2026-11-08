@@ -45,7 +45,9 @@ Tell the agent in Herdr, as you would for any layout in Herdr's gallery:
 Read ~/.config/herdr-app/AGENTS.md, then add this layout: github.com/avihut/herdr-xp
 ```
 
-It reads the files, copies the layout, its themes and the mod, merges the keys, checks the mod and switches to it. Your own layout stays as it is; ⌘⇧L switches back.
+It reads the files, copies the layout, its themes and the mod, merges the keys, checks the mod and switches to it. Your own layout stays as it is; Ctrl+Shift+L switches back. The recipe's [Built from](RECIPE.md#built-from) lists what the mod runs and reads.
+
+To update, ask your agent to replace your earlier install of this layout rather than add a second copy, or use the script.
 
 ### With the script
 
@@ -61,7 +63,7 @@ With [mise](https://mise.jdx.dev), `mise run install` does the same and then che
 
 The script copies `layouts/winxp.json` (with its Settings picture), the two themes and `mods/winxp` into `~/.config/herdr-app` (or `$HERDR_APP_HOME`). If you have a `keys.json`, it adds Ctrl+Esc to open the Start menu and ⌘⇧S to open the Simulator there, unless you already use those keys. Herdr treats an edited `keys.json` as yours and stops adding its new default shortcuts to it. The script backs the file up first.
 
-Then switch to it with ⌘⇧L, or run:
+Then switch to it with Ctrl+Shift+L, or run:
 
 ```sh
 herdr-app do layout.switch '{"name":"winxp"}'

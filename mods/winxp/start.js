@@ -30,6 +30,7 @@ export function programsMenu(agents) {
       { label: "Folders", icon: "folders", act: { panel: "files" } },
       { label: "Changes", icon: "changes", act: { panel: "changes" } },
       ...(hasSim() ? [{ label: "Simulator", icon: "phone", act: { panel: "herdr-sim" } }] : []),
+      { label: "Office Assistant", icon: "clippy-sm", act: { shared: ["winxp.clippy", "on"] } },
       { label: "Tour Herdr XP", icon: "tour", act: { shared: ["winxp.balloon", { kind: "tour", at: Date.now() }] } },
     ] },
     { label: "Agents", icon: "programs", sub: agentItems.length ? agentItems : [{ label: "(Empty)", disabled: true }] },

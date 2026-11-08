@@ -14,6 +14,7 @@ import {WorkspaceTree,initSpaceHierarchy,primaryRows,nestedSpaceRow} from './wor
 //   dialog      Run, Log Off, Turn Off, Display Properties, About, ...
 //   boot        the boot screen       welcome  the Welcome screen
 //   balloon     a notification balloon above the tray
+//   clippy      the Office Assistant (a floating block over the desktop)
 //   mycomputer, bin, games   Explorer windows with the task pane (games: the Games folder)
 //   taskman     Task Manager
 //   mines, sol, spider, freecell   Minesweeper and the card games (cardtable.js)
@@ -37,11 +38,12 @@ import PaneDrag from "./panedrag.js";
 import PanelBar from "./panel.js";
 import Folders from "./folders.js";
 import Changes from "./changes.js";
+import Clippy from "./clippy.js";
 
 const ROLES = {
   taskbar: Taskbar, desktop: Desktop, window: PaneWindow, start: StartMenu, menu: Menu, dialog: Dialog,
   boot: Boot, welcome: Welcome, balloon: Balloon, mycomputer: Explorer, bin: Explorer, games: Explorer, taskman: TaskMan,
-  mines: Mines, sol: Sol, spider: Spider, freecell: FreeCell, panedrag: PaneDrag, panelbar: PanelBar, folders: Folders, changes: Changes,
+  mines: Mines, sol: Sol, spider: Spider, freecell: FreeCell, panedrag: PaneDrag, panelbar: PanelBar, folders: Folders, changes: Changes, clippy: Clippy,
 };
 
 class WinXP extends View {

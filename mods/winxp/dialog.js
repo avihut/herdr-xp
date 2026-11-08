@@ -8,7 +8,7 @@
 //   about    About Herdr XP
 //   cleanup  the Desktop Cleanup Wizard
 
-import { props, closeOverlay, run, pickFolder, updates, spaces, agents, settings, shared, appHome, readTextFile, writeTextFile } from "herdr";
+import { props, closeOverlay, run, pickFolder, updates, spaces, agents, settings, shared, setShared, appHome, readTextFile, writeTextFile } from "herdr";
 import { InputState, Input } from "gpui-base";
 import { div, h_flex, v_flex, pal, bands, grad, pic, frame, button, uiFont, titleFont, userName, shadowed, perform, openDialog, sfx, own } from "./kit.js";
 
@@ -279,7 +279,8 @@ export default class Dialog {
                   .child(div().flex_1().mx(2).mb(2).bg("#000000").p(4).font_family("PxPlus IBM VGA 8x16").text_size(10).text_color("#c0c0c0").child("C:\\> _")),
               ),
           )
-          .child(div().text_size(10).text_color(P.faceDim).child("Applies to every Herdr layout (Herdr's appearance setting).")),
+          .child(div().text_size(10).text_color(P.faceDim).child("Applies to every Herdr layout (Herdr's appearance setting)."))
+          .child(this.assistantBox(P)),
       )
       .child(
         h_flex()
@@ -294,6 +295,36 @@ export default class Dialog {
           .child(button(P, "dp-cancel", "Cancel", () => this.dismiss()))
           .child(button(P, "dp-apply", "Apply", (_e, cx) => this.applyAppearance(cx))),
       );
+  }
+
+  /** XP's check box for the Office Assistant (clippy.js). It applies at once. */
+  assistantBox(P) {
+    const on = shared("winxp.clippy") !== "off";
+    return h_flex()
+      .id("dp-clippy")
+      .flex_none()
+      .gap(6)
+      .items_center()
+      .cursor_pointer()
+      .child(
+        div()
+          .flex_none()
+          .w(13)
+          .h(13)
+          .flex()
+          .items_center()
+          .justify_center()
+          .bg(P.dark ? "#1f2126" : "#ffffff")
+          .border_1()
+          .border_color("#1c5180")
+          .when(on, (el) => el.child(div().text_size(10).font_weight(700).line_height("10px").text_color("#21a121").child("✓"))),
+      )
+      .child(div().text_size(11).child("Show the Office Assistant"))
+      .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
+      .on_click((_e, cx) => {
+        setShared("winxp.clippy", on ? "off" : "on");
+        cx.notify();
+      });
   }
 
   messageBody(P) {

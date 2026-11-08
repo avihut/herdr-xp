@@ -498,6 +498,18 @@ export function closeOverlays(ids) {
   }
 }
 
+/** Closes a popup menu and every submenu opened from it. Each menu lists its parents in the
+ *  winxp.menus chain (menu.js), and a menu's own close() can't close its submenus (a press in
+ *  one may close it first). Without this, moving to another row left the old row's submenus
+ *  open, with nothing behind them. */
+export function closeMenuTree(id) {
+  if (!id) return;
+  const chain = shared("winxp.menus") ?? [];
+  const gone = new Set([id, ...chain.filter((m) => m.parents?.includes(id)).map((m) => m.id)]);
+  closeOverlays([...gone].reverse());
+  setShared("winxp.menus", chain.filter((m) => !gone.has(m.id)));
+}
+
 // ---- XP controls
 
 /** XP's push button: a white-to-cream bubble, dark blue edge, an orange glow on hover, a blue one when default. */

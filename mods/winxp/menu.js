@@ -3,7 +3,7 @@
 // choice closes the whole chain and acts.
 
 import { props, closeOverlay, setShared, shared } from "herdr";
-import { div, h_flex, v_flex, pal, iconOf, uiFont, glyph, perform, openMenu, closeOverlays, ROW, SEP } from "./kit.js";
+import { div, h_flex, v_flex, pal, iconOf, uiFont, glyph, perform, openMenu, closeOverlays, closeMenuTree, ROW, SEP } from "./kit.js";
 
 const KEY = "winxp.menus";
 const chain = () => shared(KEY) ?? [];
@@ -35,7 +35,7 @@ export default class Menu {
 
   openSub(index, item) {
     if (this.sub?.index === index) return;
-    if (this.sub) closeOverlays([this.sub.id]);
+    if (this.sub) closeMenuTree(this.sub.id);
     this.sub = null;
     const b = this.bounds[index];
     if (!item?.sub?.length || !b) return;

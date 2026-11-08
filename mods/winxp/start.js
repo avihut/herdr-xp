@@ -5,7 +5,7 @@
 // switcher); Help and Support, Search, Run. Bottom: Log Off, Turn Off.
 
 import { spaces, panes, props, closeOverlay, knownAgents, setShared, shared } from "herdr";
-import { div, h_flex, v_flex, pal, bands, grad, pic, iconOf, glyph, shadowed, uiFont, titleFont, userName, tildePath, paneTitle, perform, openMenu, closeOverlays, layoutItems, fadeLine } from "./kit.js";
+import { div, h_flex, v_flex, pal, bands, grad, pic, iconOf, glyph, shadowed, uiFont, titleFont, userName, tildePath, paneTitle, perform, openMenu, closeMenuTree, layoutItems, fadeLine } from "./kit.js";
 
 export const MENU_W = 380;
 export const MENU_H = 448;
@@ -59,14 +59,14 @@ export default class StartMenu {
   }
 
   done(act) {
-    if (this.sub) closeOverlays([this.sub.id]);
+    if (this.sub) closeMenuTree(this.sub.id);
     closeOverlay(props()?.overlay);
     perform(act);
   }
 
   openSub(key, items) {
     if (this.sub?.key === key) return;
-    if (this.sub) closeOverlays([this.sub.id]);
+    if (this.sub) closeMenuTree(this.sub.id);
     this.sub = null;
     const b = this.bounds[key];
     if (!items || !b) return;

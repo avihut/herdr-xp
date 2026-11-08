@@ -186,32 +186,30 @@ export default class Mines {
         });
     }
     const bomb = this.mine[i];
-    return own(
-      div()
-        .id(`mc-${i}`)
-        .w(CELL)
-        .h(CELL)
-        .flex_none()
-        .bg(i === this.boom ? "#ff0000" : "#c0c0c0")
-        .border_r_1()
-        .border_b_1()
-        .border_color("#808080")
-        .flex()
-        .items_center()
-        .justify_center()
-        .child(bomb ? pic("mine-bomb", 13) : div().font_family(uiFont()).font_weight(700).text_size(12).text_color(NUM[this.count[i]] || "#000000").child(this.count[i] ? String(this.count[i]) : ""))
-        .on_mouse_down("left", (e, cx) => {
-          cx.stop_propagation();
-          this.focus.focus();
-          if (e?.click_count >= 2) this.chord(i);
-          cx.notify();
-        })
-        .on_mouse_down("middle", (_e, cx) => {
-          cx.stop_propagation();
-          this.chord(i);
-          cx.notify();
-        }),
-    );
+    return div()
+      .id(`mc-${i}`)
+      .w(CELL)
+      .h(CELL)
+      .flex_none()
+      .bg(i === this.boom ? "#ff0000" : "#c0c0c0")
+      .border_r_1()
+      .border_b_1()
+      .border_color("#808080")
+      .flex()
+      .items_center()
+      .justify_center()
+      .child(bomb ? pic("mine-bomb", 13) : div().font_family(uiFont()).font_weight(700).text_size(12).text_color(NUM[this.count[i]] || "#000000").child(this.count[i] ? String(this.count[i]) : ""))
+      .on_mouse_down("left", (e, cx) => {
+        cx.stop_propagation();
+        this.focus.focus();
+        if (e?.click_count >= 2) this.chord(i);
+        cx.notify();
+      })
+      .on_mouse_down("middle", (_e, cx) => {
+        cx.stop_propagation();
+        this.chord(i);
+        cx.notify();
+      });
   }
 
   /** Letting go opens the cell under the pointer (it may not be the one first pressed). */

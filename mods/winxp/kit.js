@@ -564,22 +564,20 @@ export function menuBar(P, id, menus) {
     .border_color(P.dark ? "#3a3d45" : "#d8d2bd")
     .children(
       menus.map(([label, items], i) =>
-        own(
-          div()
-            .id(`${id}-mb${i}`)
-            .px(7)
-            .h_full()
-            .flex()
-            .items_center()
-            .text_size(11)
-            .hover((s) => s.bg(P.menuHover).text_color(P.menuHoverText))
-            .child(label)
-            .on_mouse_down("left", (e, cx) => {
-              cx.stop_propagation();
-              const b = e?.bounds;
-              openMenu(typeof items === "function" ? items() : items, b ? { x: b.x, y: b.y + b.height } : undefined);
-            }),
-        ),
+        div()
+          .id(`${id}-mb${i}`)
+          .px(7)
+          .h_full()
+          .flex()
+          .items_center()
+          .text_size(11)
+          .hover((s) => s.bg(P.menuHover).text_color(P.menuHoverText))
+          .child(label)
+          .on_mouse_down("left", (e, cx) => {
+            cx.stop_propagation();
+            const b = e?.bounds;
+            openMenu(typeof items === "function" ? items() : items, b ? { x: b.x, y: b.y + b.height } : undefined);
+          }),
       ),
     );
 }

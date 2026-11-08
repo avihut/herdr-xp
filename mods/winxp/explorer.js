@@ -129,23 +129,22 @@ export default class Explorer {
 
   game(P, [role, name, about]) {
     const on = this.sel === role;
-    return own(
-      h_flex()
-        .id(`game-${role}`)
-        .w(220)
-        .gap(8)
-        .p(4)
-        .items_center()
-        .rounded(2)
-        .when(on, (el) => el.bg(P.menuHover).text_color("#ffffff"))
-        .child(pic(role, 32))
-        .child(v_flex().min_w(0).child(div().truncate().text_size(11).child(name)).child(div().truncate().text_size(10).opacity(0.7).child(about)))
-        .on_mouse_down("left", (_e, cx) => {
-          this.sel = role;
-          cx.notify();
-        })
-        .on_click(() => openWindow(role)),
-    );
+    return h_flex()
+      .id(`game-${role}`)
+      .w(220)
+      .gap(8)
+      .p(4)
+      .items_center()
+      .rounded(2)
+      .when(on, (el) => el.bg(P.menuHover).text_color("#ffffff"))
+      .child(pic(role, 32))
+      .child(v_flex().min_w(0).child(div().truncate().text_size(11).child(name)).child(div().truncate().text_size(10).opacity(0.7).child(about)))
+      .on_mouse_down("left", (_e, cx) => {
+        cx.stop_propagation();
+        this.sel = role;
+        cx.notify();
+      })
+      .on_click(() => openWindow(role));
   }
 
   group(P, title, children) {

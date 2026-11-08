@@ -191,58 +191,57 @@ export default class Taskbar {
   taskButton(P, key, o) {
     const bg = o.flash ? "#f08f30" : o.pressed ? P.taskOn : P.task;
     const hover = o.flash ? "#ffa64d" : o.pressed ? P.taskOnHover : P.taskHover;
-    return own(
-      div()
-        .id(`task-${key}`)
-        .relative()
-        .flex_1()
-        .min_w(40)
-        .max_w(150)
-        .h(22)
-        .mt(2)
-        .rounded(2)
-        .overflow_hidden()
-        .bg(bg)
-        .hover((s) => s.bg(hover))
-        .when(Boolean(o.dragging), (el) => el.opacity(0.55))
-        .tooltip(o.label)
-        .child(div().absolute().top(0).left(0).size_full().rounded(2).border_t_1().border_l_1().border_color(o.pressed ? "#00000059" : "#ffffff33"))
-        .child(div().absolute().top(0).right(0).w(1).h_full().bg("#0000004d"))
-        .child(
-          h_flex()
-            .relative()
-            .size_full()
-            .items_center()
-            .gap(5)
-            .px(8)
-            .child(div().relative().flex_none().child(o.icon).when(Boolean(o.badge), (el) => el.child(div().absolute().bottom(-2).right(-2).w(7).h(7).rounded(4).border_1().border_color("#ffffff").bg(statusColor(o.badge)))))
-            .child(div().flex_1().min_w(0).text_size(11).child(shadowed(o.label, P.taskText, "#00000059", { truncate: true })))
-            .when(Boolean(o.group), (el) => el.child(glyph("menu-up", 8, "#ffffff"))),
-        )
-        .when(Boolean(o.mark), (el) =>
-          el.child(
-            div()
-              .absolute()
-              .top(0)
-              .w(3)
-              .h_full()
-              .bg("#ffffff")
-              .border_color("#0a246a")
-              .when(o.mark === "before", (b) => b.left(0).border_r_1())
-              .when(o.mark === "after", (b) => b.right(0).border_l_1()),
-          ),
-        )
-        .on_mouse_down("left", (e, cx) => {
-          cx.stop_propagation();
-          o.onDown?.(e);
-        })
-        .when(Boolean(o.onMove), (el) => el.on_mouse_move((e, cx) => o.onMove(e, cx)))
-        .on_click(() => {
-          // The release that ends a drag isn't a click.
-          if (this.tabDrag?.moved || Date.now() - (this.dragEndAt ?? 0) < 300) return;
-          o.onClick?.();
-        }),
-    );
+    return div()
+      .id(`task-${key}`)
+      .relative()
+      .flex_1()
+      .min_w(40)
+      .max_w(150)
+      .h(22)
+      .mt(2)
+      .rounded(2)
+      .overflow_hidden()
+      .bg(bg)
+      .hover((s) => s.bg(hover))
+      .when(Boolean(o.dragging), (el) => el.opacity(0.55))
+      .tooltip(o.label)
+      .child(div().absolute().top(0).left(0).size_full().rounded(2).border_t_1().border_l_1().border_color(o.pressed ? "#00000059" : "#ffffff33"))
+      .child(div().absolute().top(0).right(0).w(1).h_full().bg("#0000004d"))
+      .child(
+        h_flex()
+          .relative()
+          .size_full()
+          .items_center()
+          .gap(5)
+          .px(8)
+          .child(div().relative().flex_none().child(o.icon).when(Boolean(o.badge), (el) => el.child(div().absolute().bottom(-2).right(-2).w(7).h(7).rounded(4).border_1().border_color("#ffffff").bg(statusColor(o.badge)))))
+          .child(div().flex_1().min_w(0).text_size(11).child(shadowed(o.label, P.taskText, "#00000059", { truncate: true })))
+          .when(Boolean(o.group), (el) => el.child(glyph("menu-up", 8, "#ffffff"))),
+      )
+      .when(Boolean(o.mark), (el) =>
+        el.child(
+          div()
+            .absolute()
+            .top(0)
+            .w(3)
+            .h_full()
+            .bg("#ffffff")
+            .border_color("#0a246a")
+            .when(o.mark === "before", (b) => b.left(0).border_r_1())
+            .when(o.mark === "after", (b) => b.right(0).border_l_1()),
+        ),
+      )
+      .on_mouse_down("left", (e, cx) => {
+        cx.stop_propagation();
+        o.onDown?.(e);
+      })
+      .when(Boolean(o.onMove), (el) => el.on_mouse_move((e, cx) => o.onMove(e, cx)))
+      .when(Boolean(o.onUp), (el) => el.on_mouse_up("left", (e, cx) => o.onUp(e, cx)))
+      .on_click(() => {
+        // The release that ends a drag isn't a click.
+        if (this.tabDrag?.moved || Date.now() - (this.dragEndAt ?? 0) < 300) return;
+        o.onClick?.();
+      });
   }
 
   // ---- reordering tabs by dragging their buttons
@@ -250,6 +249,22 @@ export default class Taskbar {
 
   pressTab(id, e) {
     this.tabDrag = e?.position ? { id, x0: e.position.x, moved: false, over: null } : null;
+  }
+
+  /** The release over a button (ids: its tabs). Herdr delivers it to the button under the
+   *  pointer wherever the press was, so this, not the moves, decides the drop. */
+  upOn(ids, e, order, cx) {
+    const d = this.tabDrag;
+    if (!d) return;
+    const far = e?.position ? Math.abs(e.position.x - d.x0) > SLOP : false;
+    if (!d.moved && !far && ids.includes(d.id)) {
+      this.tabDrag = null; // a click: on_click handles it
+      return;
+    }
+    const side = e?.local_position && e?.bounds ? (e.local_position.x < e.bounds.width / 2 ? "before" : "after") : d.over?.side ?? "after";
+    d.over = { ids, side };
+    d.moved = true;
+    this.dropTab(order, cx);
   }
 
   /** The pointer is over a button (ids: its tabs): which half says before or after it. */
@@ -316,6 +331,7 @@ export default class Taskbar {
         mark: this.markFor(ids, order),
         onDown: (e) => tabs.length > 1 && this.pressTab(t.id, e),
         onMove: (e, cx) => this.overButton(ids, e, cx),
+        onUp: (e, cx) => this.upOn(ids, e, order, cx),
         onClick: () => (pressed ? run("tab.settle", { id: t.id }) : run("tab.select", { id: t.id })),
       });
     };
@@ -342,7 +358,9 @@ export default class Taskbar {
           group: true,
           mark: this.markFor(ids, order),
           onMove: (e, cx) => this.overButton(ids, e, cx),
+          onUp: (e, cx) => this.upOn(ids, e, order, cx),
           onDown: (e) => {
+            this.tabDrag = null;
             const b = e?.bounds;
             const items = list.map(({ t, p }) => ({ label: t.named ? t.name : paneTitle(p) || `Tab ${t.index}`, icon: p?.program && !p.program.shell ? { program: p.program } : "cmd", bold: t.active, act: { run: ["tab.select", { id: t.id }] } }));
             openMenu(items, b ? { above: b } : undefined);

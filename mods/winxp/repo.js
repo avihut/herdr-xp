@@ -13,7 +13,11 @@ import { readdir } from "fs/promises";
 
 /** Reads write nothing under .git (no index lock or refresh, no fsmonitor cookie), so a folder
  *  watch doesn't see them and start the next refresh. */
-const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
+const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false", "-c", "diff.ignoreSubmodules=all"];
+// Every read also leaves submodules alone (Git would run inside them, under their own config) and
+// runs no external diff or text conversion (both can name a command in the repository's config).
+const STATUS = ["status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all", "--ignore-submodules=all"];
+const SAFE_DIFF = ["--no-ext-diff", "--no-textconv", "--ignore-submodules=all"];
 export const PER_FOLDER = 500;
 const MAX_FILES = 1000;
 const MAX_LINES = 1500;
@@ -58,7 +62,8 @@ async function gitRoot(cwd, on) {
 export const UNTRUSTED = "This repository sets its own Git filters, so it isn't read automatically.";
 async function ownFilters(root, on) {
   const r = await exec("git", ["config", "--show-scope", "--get-regexp", "^filter\\."], { cwd: root, on }).catch(() => null);
-  if (!r || r.code !== 0) return false; // 1: no filters at all
+  if (r?.code === 1 && !r.stderr.trim()) return false; // no filters anywhere
+  if (r?.code !== 0) return true; // couldn't tell: don't read it
   return r.stdout.split("\n").some((l) => /^(local|worktree|command)\s/.test(l));
 }
 
@@ -67,7 +72,7 @@ const statusOf = (xy) => (xy.includes("U") || xy === "AA" || xy === "DD" ? "U" :
 export async function gitMarks(cwd, on) {
   const root = await gitRoot(cwd, on);
   if (!root || (await ownFilters(root, on))) return {};
-  const r = await exec("git", [...READ, "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"], { cwd: root, on }).catch(() => null);
+  const r = await exec("git", [...READ, ...STATUS], { cwd: root, on }).catch(() => null);
   const marks = {};
   if (r?.code === 0) for (const e of r.stdout.split("\0").filter(Boolean).slice(0, 5000)) marks[`${root}/${e.slice(3)}`] = statusOf(e.slice(0, 2));
   return marks;
@@ -78,11 +83,11 @@ export async function readChanges(cwd, on) {
   if (!root) return { root: null, files: [], error: "Not a Git repository" };
   if (await ownFilters(root, on)) return { root: null, files: [], error: UNTRUSTED };
   const git = (args) => exec("git", [...READ, ...args], { cwd: root, on });
-  const status = await git(["status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"]);
+  const status = await git(STATUS);
   if (status.code !== 0) throw new Error(status.stderr);
   const hasHead = (await git(["rev-parse", "--verify", "HEAD"])).code === 0;
   const stats = {};
-  const counts = hasHead ? [await git(["diff", "HEAD", "--numstat", "-z", "--no-renames"])] : [await git(["diff", "--cached", "--numstat", "-z", "--no-renames"]), await git(["diff", "--numstat", "-z", "--no-renames"])];
+  const counts = hasHead ? [await git(["diff", "HEAD", ...SAFE_DIFF, "--numstat", "-z", "--no-renames"])] : [await git(["diff", "--cached", ...SAFE_DIFF, "--numstat", "-z", "--no-renames"]), await git(["diff", ...SAFE_DIFF, "--numstat", "-z", "--no-renames"])];
   for (const r of counts) {
     if (r.code !== 0) throw new Error(r.stderr);
     for (const entry of r.stdout.split("\0")) {
@@ -114,7 +119,7 @@ export async function fileDiff(state, file) {
     file.add = countLines(text);
     lines = [`@@ -0,0 +1,${file.add} @@`, ...text.slice(0, 400000).replace(/\n$/, "").split("\n").map((l) => `+${l}`)];
   } else {
-    const r = await exec("git", [...READ, "diff", ...(hasHead ? ["HEAD"] : []), "--no-ext-diff", "--no-textconv", "--no-color", "--", file.path], { cwd: root, on });
+    const r = await exec("git", [...READ, "diff", ...(hasHead ? ["HEAD"] : []), ...SAFE_DIFF, "--no-color", "--", file.path], { cwd: root, on });
     if (r.code !== 0) throw new Error(r.stderr);
     const all = r.stdout.replace(/\n$/, "").split("\n");
     const first = all.findIndex((l) => l.startsWith("@@"));

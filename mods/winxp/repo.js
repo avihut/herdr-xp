@@ -51,11 +51,22 @@ async function gitRoot(cwd, on) {
   return r?.code === 0 ? r.stdout.trim() : null;
 }
 
+/** git status and diff run a repository's filter commands (clean, process) on files whose stat
+ *  info changed. A repository whose own config defines filters (an unpacked archive with its .git,
+ *  say) could run anything that way, so the bars don't read it on their own. Filters from your
+ *  global or system config (Git LFS) are yours and fine. Reading config runs nothing. */
+export const UNTRUSTED = "This repository sets its own Git filters, so it isn't read automatically.";
+async function ownFilters(root, on) {
+  const r = await exec("git", ["config", "--show-scope", "--get-regexp", "^filter\\."], { cwd: root, on }).catch(() => null);
+  if (!r || r.code !== 0) return false; // 1: no filters at all
+  return r.stdout.split("\n").some((l) => /^(local|worktree|command)\s/.test(l));
+}
+
 const statusOf = (xy) => (xy.includes("U") || xy === "AA" || xy === "DD" ? "U" : xy.includes("D") ? "D" : xy === "??" || xy.includes("A") ? "A" : "M");
 
 export async function gitMarks(cwd, on) {
   const root = await gitRoot(cwd, on);
-  if (!root) return {};
+  if (!root || (await ownFilters(root, on))) return {};
   const r = await exec("git", [...READ, "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"], { cwd: root, on }).catch(() => null);
   const marks = {};
   if (r?.code === 0) for (const e of r.stdout.split("\0").filter(Boolean).slice(0, 5000)) marks[`${root}/${e.slice(3)}`] = statusOf(e.slice(0, 2));
@@ -65,6 +76,7 @@ export async function gitMarks(cwd, on) {
 export async function readChanges(cwd, on) {
   const root = await gitRoot(cwd, on);
   if (!root) return { root: null, files: [], error: "Not a Git repository" };
+  if (await ownFilters(root, on)) return { root: null, files: [], error: UNTRUSTED };
   const git = (args) => exec("git", [...READ, ...args], { cwd: root, on });
   const status = await git(["status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"]);
   if (status.code !== 0) throw new Error(status.stderr);

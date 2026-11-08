@@ -152,19 +152,6 @@
             }
           ]
         }
-      ],
-      "floating": [
-        {
-          "id": "clippy",
-          "content": {
-            "mod": "winxp",
-            "props": {
-              "role": "clippy"
-            }
-          },
-          "edge": "left",
-          "align": "end"
-        }
       ]
     },
     {

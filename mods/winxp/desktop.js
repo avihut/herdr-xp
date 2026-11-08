@@ -20,13 +20,20 @@ import { run, layout, shared, spaces } from "herdr";
 import { div, h_flex, v_flex, pal, pic, isDark, uiFont, openMenu, openWindow, openDialog } from "./kit.js";
 import { GAMES } from "./explorer.js";
 import { primaryRows, toggleSpaceChildren } from "./workspace-tree.js";
+import { Assistant } from "./clippy.js";
 import { dropPosition, siblingMove } from "./taborder.js";
 
 const SLOP = 4; // px a press moves before it is a drag, not a click
 const WALL = (k) => `mods/winxp/img/wallpaper-${k}.svg`;
 
 export default class Desktop {
-  init() {
+  init(_p, cx) {
+    this.clippy = new Assistant();
+    // agents() changing doesn't re-render the desktop by itself: look every 2 s whether the
+    // assistant's balloon should change, and render only then.
+    cx?.timer.every(2000, (cx) => {
+      if ((this.clippy.want()?.key ?? null) !== (this.clippy.balloon?.key ?? null)) cx.notify();
+    });
     this.asked = null;
     this.sel = null;
   }
@@ -431,14 +438,17 @@ export default class Desktop {
     const rows = primaryRows();
     this.rows = rows;
     this.tree = new Map(rows.map((r) => [r.id, { parent: r.nesting.parentId ?? null, machine: r.machine ?? null }]));
-    return v_flex()
+    // The Office Assistant (clippy.js) stands over the strip's bottom; the folders keep clear of it.
+    this.clippy.sync();
+    const clip = this.clippy.element(Boolean(this.clippy.balloon?.key?.startsWith("agent:")));
+    const column = v_flex()
       .id("xp-desktop")
       .size_full()
       .font_family(uiFont())
       .items_center()
       .gap(4)
       .pt(40)
-      .pb(8)
+      .pb(clip ? 100 : 8)
       .overflow_y_scroll()
       .on_mouse_down("left", (_e, cx) => {
         this.sel = null;
@@ -467,5 +477,6 @@ export default class Desktop {
           ],
         }),
       );
+    return div().relative().size_full().child(column).when(Boolean(clip), (el) => el.child(clip));
   }
 }

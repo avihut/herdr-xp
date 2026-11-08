@@ -14,7 +14,7 @@ import {WorkspaceTree,initSpaceHierarchy,primaryRows,nestedSpaceRow} from './wor
 //   dialog      Run, Log Off, Turn Off, Display Properties, About, ...
 //   boot        the boot screen       welcome  the Welcome screen
 //   balloon     a notification balloon above the tray
-//   clippy      the Office Assistant (a floating block over the desktop)
+//   clippy      the Office Assistant's balloon (the desktop draws the paperclip)
 //   mycomputer, bin, games   Explorer windows with the task pane (games: the Games folder)
 //   taskman     Task Manager
 //   mines, sol, spider, freecell   Minesweeper and the card games (cardtable.js)
